@@ -62,14 +62,15 @@ architecture rtl of composite_to_vga is
 	signal Xint : integer range 0 to 1023;
 	signal Yint : integer range 0 to 1023;
 		
-	signal NPIX : integer range 0 to 1023 := 51+11;	-- Number of pixels to skip after SYNC pulse (horizontal blanking)
+	--signal NPIX : integer range 0 to 1023 := 51+11;	-- Number of pixels to skip after SYNC pulse (horizontal blanking)
+	signal NPIX : integer range 0 to 1023;	-- Number of pixels to skip after SYNC pulse (horizontal blanking)
 	signal NPIX_MAX : integer range 0 to 1023; -- := NPIX+XRES;
 
 	constant NPIX1 : integer range 0 to 1023 := 51+11;	-- Number of pixels to skip after SYNC pulse (horizontal blanking)
-	constant NPIX_MAX1 : integer range 0 to 1023 := NPIX+XRES;
+	constant NPIX_MAX1 : integer range 0 to 1023 := 51+11+XRES;
 
 	constant NPIX2 : integer range 0 to 1023 := 51+11+3*8-2;	-- Number of pixels to skip after SYNC pulse (horizontal blanking)
-	constant NPIX_MAX2 : integer range 0 to 1023 := NPIX+XRES;
+	constant NPIX_MAX2 : integer range 0 to 1023 := 51+11+XRES;
 
 
 	constant NSYNC : integer range 0 to 1023:= 3;	-- Number of SYNC pulses to skip after START_OF_FRAME (vertical blanking)

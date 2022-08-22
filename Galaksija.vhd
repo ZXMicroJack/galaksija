@@ -547,7 +547,7 @@ tristategenerate: for i in 0 to 7 generate
 						CLK_FB => CLK_50M_VGA
 					);
 
-	CLK_50M_PBLAZE <= extCLK_50M;
+-- 	CLK_50M_PBLAZE <= extCLK_50M;
 	CLK_50M <= extCLK_50M;
 
 	-- CLK_SEL is set by Picoblaze via CPU_FREQ menu
@@ -829,10 +829,8 @@ tristategenerate: for i in 0 to 7 generate
 	end process;
 	
 	-- Character generator address	
-	CHROM_A <= LATCH_DATA(3 downto 0) & TMP(7) & TMP(5 downto 0) when ESC_STATE = '0' else
-				  PBLAZE_CHADDR;
-	CHROM_CLK <= PIX_CLK when ESC_STATE = '0' else
-					 CLK_50M;
+	CHROM_A <= LATCH_DATA(3 downto 0) & TMP(7) & TMP(5 downto 0) when ESC_STATE = '0' else PBLAZE_CHADDR;
+	CHROM_CLK <= PIX_CLK when ESC_STATE = '0' else CLK_50M;
 
 	CH_GEN_ROM: galaksija_chgen_rom
 	port map (
@@ -892,23 +890,23 @@ tristategenerate: for i in 0 to 7 generate
 			end if;
 		end process;
 
-		process(CLK_50M_PBLAZE, PBLAZE_VWR, PBLAZE_VADDR, PBLAZE_VDATA)
-		begin
-			if (CLK_50M_PBLAZE'event) and (CLK_50M_PBLAZE = '1') then
-				PBLAZE_VWR_P50M <= PBLAZE_VWR;
-				PBLAZE_VADDR_P50M <= PBLAZE_VADDR;
-				PBLAZE_VDATA_P50M <= PBLAZE_VDATA;
-			end if;
-		end process;
-
-		process(CLK_50M_VGA, PBLAZE_VWR_P50M, PBLAZE_VADDR_P50M, PBLAZE_VDATA_P50M)
-		begin
-			if (CLK_50M_VGA'event) and (CLK_50M_VGA = '1') then
-				PBLAZE_VWR_VGA <= PBLAZE_VWR_P50M;
-				PBLAZE_VADDR_VGA <= PBLAZE_VADDR_P50M;
-				PBLAZE_VDATA_VGA <= PBLAZE_VDATA_P50M;
-			end if;
-		end process;
+-- 		process(CLK_50M_PBLAZE, PBLAZE_VWR, PBLAZE_VADDR, PBLAZE_VDATA)
+-- 		begin
+-- 			if (CLK_50M_PBLAZE'event) and (CLK_50M_PBLAZE = '1') then
+-- 				PBLAZE_VWR_P50M <= PBLAZE_VWR;
+-- 				PBLAZE_VADDR_P50M <= PBLAZE_VADDR;
+-- 				PBLAZE_VDATA_P50M <= PBLAZE_VDATA;
+-- 			end if;
+-- 		end process;
+-- 
+-- 		process(CLK_50M_VGA, PBLAZE_VWR_P50M, PBLAZE_VADDR_P50M, PBLAZE_VDATA_P50M)
+-- 		begin
+-- 			if (CLK_50M_VGA'event) and (CLK_50M_VGA = '1') then
+-- 				PBLAZE_VWR_VGA <= PBLAZE_VWR_P50M;
+-- 				PBLAZE_VADDR_VGA <= PBLAZE_VADDR_P50M;
+-- 				PBLAZE_VDATA_VGA <= PBLAZE_VDATA_P50M;
+-- 			end if;
+-- 		end process;
 
 	--
 	--
@@ -1014,32 +1012,32 @@ tristategenerate: for i in 0 to 7 generate
 	-- Picoblaze system for data storage
 	--
 	
-	pblaze_soc: picoblaze_soc 
-		 Port map(
-			CLK_50M => CLK_50M_PBLAZE,
-			RESET_n => RESET_n,
-			KEY_STROBE => KEY_STROBE,
-			KEY_CODE => KEY_CODE,
-			ESC_STATE => ESC_STATE,
-			
-			CH_ADDR => PBLAZE_CHADDR,
-			CH_DATA => CHROM_D,
-
-			VIDEO_ADDR => PBLAZE_VADDR,
-			VIDEO_DATA => PBLAZE_VDATA,
-			VIDEO_WR	  => PBLAZE_VWR,
-			
-			PRAM_CLK2 => PRAM_CLK2,
-			PRAM_WR2 => PRAM_WR2,
-			PRAM_DIN2 => PRAM_DOUT2,
-			PRAM_DOUT2 => PRAM_DIN2,
-			PRAM_ADDR2 => PRAM_ADDR2,
-			
-			CLK_SEL => CLK_SEL,
-			
-			LINE_IN => PBLAZE_LIN,
-			LINE_OUT => PBLAZE_LOUT
-		 );
+-- 	pblaze_soc: picoblaze_soc 
+-- 		 Port map(
+-- 			CLK_50M => CLK_50M_PBLAZE,
+-- 			RESET_n => RESET_n,
+-- 			KEY_STROBE => KEY_STROBE,
+-- 			KEY_CODE => KEY_CODE,
+-- 			ESC_STATE => ESC_STATE,
+-- 			
+-- 			CH_ADDR => PBLAZE_CHADDR,
+-- 			CH_DATA => CHROM_D,
+-- 
+-- 			VIDEO_ADDR => PBLAZE_VADDR,
+-- 			VIDEO_DATA => PBLAZE_VDATA,
+-- 			VIDEO_WR	  => PBLAZE_VWR,
+-- 			
+-- 			PRAM_CLK2 => PRAM_CLK2,
+-- 			PRAM_WR2 => PRAM_WR2,
+-- 			PRAM_DIN2 => PRAM_DOUT2,
+-- 			PRAM_DOUT2 => PRAM_DIN2,
+-- 			PRAM_ADDR2 => PRAM_ADDR2,
+-- 			
+-- 			CLK_SEL => CLK_SEL,
+-- 			
+-- 			LINE_IN => PBLAZE_LIN,
+-- 			LINE_OUT => PBLAZE_LOUT
+-- 		 );
 		
 	--
 	--

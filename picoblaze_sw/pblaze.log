@@ -1,0 +1,100 @@
+
+Picoblaze Assembler based on kpicosim.
+Generates ROM files instead of VHDL
+Modified by GND  Version 0.2a
+Source File: pblaze.asm
+
+Line  Addr Instr  Source Code
+   1              ; Constants
+   2              
+   3              ; Port locations for reading
+   4              
+   5              CONSTANT	KEY_CODE, 0		; key code. special fn bit is at bit 7
+   6              CONSTANT	KEY_STICKY, 1		; KEY_STICKY bit is at bit 0
+   7              CONSTANT	ESC_STATE, 2		; esc_state is at bit 0
+   8              
+   9              ; Port locations for writing
+  10              CONSTANT	VIDEO_ADDR_L,0
+  11              CONSTANT	VIDEO_ADDR_H,1
+  12              CONSTANT	VIDEO_DATA,2
+  13              CONSTANT	VIDEO_WR, 3
+  14              CONSTANT	LINE_OUT, 4
+  15              CONSTANT	KEY_READ, 7
+  16              
+  17              
+  18              NAMEREG		sF, stack_pointer
+  19              
+  20              
+  21              ; Scratch-pad RAM locations
+  22              
+  23              CONSTANT	IMAGE_NUMBER, 0		; this scratch-pad location contains the number of image to be played
+  24              
+  25              
+  26              ; Scratch-par RAM from 20h to end is reserved for stack
+  27              
+  28              ADDRESS 0
+  29              
+  30              Start:
+  31  000  00f20  	LOAD	sF, 20			; init stack pointer
+  32  001  3c000  	DISABLE INTERRUPT		; disable interrupts
+  33              	;ENABLE INTERRUPT		; enable interrupts
+  34              
+  35              	; Init output lines
+  36              	
+  37  002  00000  	LOAD	s0, 0
+  38  003  2c003  	OUTPUT	s0, VIDEO_WR
+  39  004  2c007  	OUTPUT	s0, KEY_READ
+  40  005  00001  	LOAD	s0, 1
+  41  006  2c004  	OUTPUT	s0, LINE_OUT
+  42              
+  43              dead:
+  44  007  00001  	LOAD	s0, 1
+  45  008  3000c  	CALL	EraseScreen
+  46  009  00000  	LOAD	s0, 0
+  47  00a  3000c  	CALL	EraseScreen
+  48              
+  49              
+  50  00b  34007  	JUMP	dead
+  51              
+  52              
+  53              ;------------------------------------------------------------------------------
+  54              ; Erase screen with bit set in s0
+  55              EraseScreen:
+  56  00c  2c002  	OUTPUT	s0, VIDEO_DATA
+  57              	
+  58  00d  00000  	LOAD	s0, 0
+  59  00e  001d0  	LOAD	s1, D0
+  60              
+  61  00f  00200  	LOAD	s2, 0
+  62  010  00301  	LOAD	s3, 1
+  63              
+  64              EraseScreen_l1:
+  65  011  2c000  	OUTPUT	s0, VIDEO_ADDR_L
+  66  012  2c101  	OUTPUT	s1, VIDEO_ADDR_H
+  67              
+  68  013  2c203  	OUTPUT	s2, VIDEO_WR
+  69  014  2c303  	OUTPUT	s3, VIDEO_WR
+  70  015  2c203  	OUTPUT	s2, VIDEO_WR
+  71              		
+  72  016  1c001  	SUB	s0, 1
+  73  017  35411  	JUMP	NZ, EraseScreen_l1
+  74  018  1c101  	SUB	s1, 1
+  75  019  35411  	JUMP	NZ, EraseScreen_l1
+  76              
+  77  01a  2c103  	OUTPUT	s1, VIDEO_WR
+  78              
+  79  01b  2a000  	RETURN		
+  80              	
+  81              		
+  82              ;------------------------------------------------------------------------------
+  83              
+  84              ;------------------------------------------------------------------------------
+  85              
+  86              ; Interrupt handler
+  87              interrupt_handler:
+  88              
+  89  01c  38001  	RETURNI ENABLE	; return from interrupt, enable interrupts
+  90              
+  91              ADDRESS 3FF
+  92              	JUMP	interrupt_handler
+  93              

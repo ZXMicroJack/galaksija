@@ -1,0 +1,1687 @@
+
+Picoblaze Assembler based on kpicosim.
+Generates ROM files instead of VHDL
+Modified by GND  Version 0.2a
+Source File: pblaze_v2.asm
+
+Line  Addr Instr  Source Code
+   1              ; *****************************************************************************
+   2              ; *****************************************************************************
+   3              ; *****************************************************************************
+   4              	; Constants
+   5              
+   6              	; Port locations for reading
+   7              
+   8              	CONSTANT	KEY_CODE, 0		; key code. special fn bit is at bit 7
+   9              	CONSTANT	KEY_STICKY, 1		; KEY_STICKY bit is at bit 0
+  10              	CONSTANT	ESC_STATE, 2		; esc_state is at bit 0
+  11              
+  12              	CONSTANT	SPI_in_port, 05		; Read serial data from FLASH device
+  13              	CONSTANT	DNA_read_port, 06	; Output data from the DNA primitive
+  14              	CONSTANT	CH_DATA, 7		; data read from character generator
+  15              
+  16              	CONSTANT	RAM_DIN_port, 3		; data read from RAM
+  17              
+  18              	; Bit locations for reading
+  19              	CONSTANT	SPI_miso, 01		; Master In Slave Out - bit0
+  20              	CONSTANT	DNA_dout, 01		; DOUT - bit0
+  21              
+  22              	; Port locations for writing
+  23              	CONSTANT	VIDEO_ADDR_L,0
+  24              	CONSTANT	VIDEO_ADDR_H,1
+  25              	CONSTANT	VIDEO_DATA,2
+  26              	CONSTANT	VIDEO_WR, 3
+  27              	CONSTANT	LINE_OUT, 4
+  28              	CONSTANT	CH_ADDR_L, 5
+  29              	CONSTANT	CH_ADDR_H, 6
+  30              	CONSTANT	KEY_READ, 7		; KEY_READ bit is at bit 0
+  31              	CONSTANT	SPI_out_port, 08	; Data to write into FLASH device
+  32              	CONSTANT	DNA_control_port, 10	; Input data and control to the DNA primitive
+  33              	CONSTANT	CPU_SEL_port, 20	; CPU frequency selector port
+  34              
+  35              	CONSTANT	RAM_WR_CK_port, 80	; RAM WR and CK
+  36              	CONSTANT	RAM_DOUT_port, 81	; Data to be sent to RAM
+  37              	CONSTANT	RAM_ADDR_L_port, 82	; RAM address, low byte
+  38              	CONSTANT	RAM_ADDR_H_port, 83	; RAM address, high byte
+  39              
+  40              	; Bit locations for writing
+  41              	CONSTANT	SPI_sck, 01		; Clock - bit0
+  42              	CONSTANT	SPI_rom_cs, 02		; FLASH chip select (active Low) - bit1
+  43              	CONSTANT	SPI_mosi, 80		; Master Out Slave In - bit7
+  44              
+  45              	CONSTANT	DNA_clk, 01		; CLK - bit0
+  46              	CONSTANT	DNA_shift, 02		; SHIFT - bit1
+  47              	CONSTANT	DNA_read, 04		; READ - bit2
+  48              	CONSTANT	DNA_din, 08		; DIN - bit3
+  49              
+  50              	CONSTANT	RAM_CK, 1		; RAM_CK - bit0
+  51              	CONSTANT	RAM_WR, 2		; RAM_WR - bit1
+  52              	CONSTANT	RAM_WRCK, 3
+  53              
+  54              ; *****************************************************************************
+  55              ; ASCII constants
+  56              ; *****************************************************************************
+  57              
+  58              	CONSTANT character_A, 41
+  59              	CONSTANT character_B, 42
+  60              	CONSTANT character_C, 43
+  61              	CONSTANT character_D, 44
+  62              	CONSTANT character_E, 45
+  63              	CONSTANT character_F, 46
+  64              	CONSTANT character_G, 47
+  65              	CONSTANT character_H, 48
+  66              	CONSTANT character_I, 49
+  67              	CONSTANT character_J, 4A
+  68              	CONSTANT character_K, 4B
+  69              	CONSTANT character_L, 4C
+  70              	CONSTANT character_M, 4D
+  71              	CONSTANT character_N, 4E
+  72              	CONSTANT character_O, 4F
+  73              	CONSTANT character_P, 50
+  74              	CONSTANT character_Q, 51
+  75              	CONSTANT character_R, 52
+  76              	CONSTANT character_S, 53
+  77              	CONSTANT character_T, 54
+  78              	CONSTANT character_U, 55
+  79              	CONSTANT character_V, 56
+  80              	CONSTANT character_W, 57
+  81              	CONSTANT character_X, 58
+  82              	CONSTANT character_Y, 59
+  83              	CONSTANT character_Z, 5A
+  84              	CONSTANT character_0, 30
+  85              	CONSTANT character_1, 31
+  86              	CONSTANT character_2, 32
+  87              	CONSTANT character_3, 33
+  88              	CONSTANT character_4, 34
+  89              	CONSTANT character_5, 35
+  90              	CONSTANT character_6, 36
+  91              	CONSTANT character_7, 37
+  92              	CONSTANT character_8, 38
+  93              	CONSTANT character_9, 39
+  94              
+  95              ; *****************************************************************************
+  96              ; *****************************************************************************
+  97              ; *****************************************************************************
+  98              
+  99              	NAMEREG		sF, stack_pointer
+ 100              
+ 101              ; *****************************************************************************
+ 102              ; *****************************************************************************
+ 103              ; *****************************************************************************
+ 104              
+ 105              ; Scratch-pad RAM locations
+ 106              	CONSTANT SPI_bus_status, 00
+ 107              	CONSTANT AT45DB081D_page_mode, 01      ;LSB indicates size of pages '0'=264 Bytes '1'=256 bytes.
+ 108              
+ 109              	; X and Y positions for graphic subs
+ 110              	CONSTANT XPOS, 02
+ 111              	CONSTANT YPOS, 03
+ 112              
+ 113              	CONSTANT PRINT_TYPE, 04			; 0 - normal print, 1 - inverted
+ 114              
+ 115              	CONSTANT SEL_MENU_ITEM, 05		; selected menu item
+ 116              	CONSTANT CURR_MENU, 06			; Current menu
+ 117              
+ 118              	CONSTANT CPU_FREQ_SEL, 07		; selected CPU freq
+ 119              
+ 120              	CONSTANT FLASH_IMAGE_NUMBER, 08		; Galaksija RAM image number <32
+ 121              	CONSTANT FLASH_PAGE_NUMBER, 09		; Page number in RAM image <32
+ 122              	CONSTANT FLASH_EXT_ADDR, 0A		; Extended addresses (bytes 256 - 263 of FLASH page - used for image name)
+ 123              						; Only 0 and 1 are allowed
+ 124              	CONSTANT FLASH_IMAGE_NAME0, 10
+ 125              	CONSTANT FLASH_IMAGE_NAME1, 11
+ 126              	CONSTANT FLASH_IMAGE_NAME2, 12
+ 127              	CONSTANT FLASH_IMAGE_NAME3, 13
+ 128              	CONSTANT FLASH_IMAGE_NAME4, 14
+ 129              	CONSTANT FLASH_IMAGE_NAME5, 15
+ 130              	CONSTANT FLASH_IMAGE_NAME6, 16
+ 131              	CONSTANT FLASH_IMAGE_NAME7, 17
+ 132              
+ 133              	CONSTANT CURRENT_LETTER, 18
+ 134              
+ 135              
+ 136              ; Current menu numbering
+ 137              ; 0 - Main menu
+ 138              ; 1 - Load mem menu
+ 139              ; 2 - Save mem menu
+ 140              ; 3 - CPU freq menu
+ 141              
+ 142              
+ 143              ; Scratch-par RAM from 20h to end is reserved for stack
+ 144              
+ 145              ; *****************************************************************************
+ 146              ; *****************************************************************************
+ 147              ; *****************************************************************************
+ 148              
+ 149              ADDRESS 0
+ 150              
+ 151              Start:
+ 152  000  00f20  	LOAD	stack_pointer, 20			; init stack pointer
+ 153  001  3c000  	DISABLE INTERRUPT		; disable interrupts
+ 154              
+ 155  002  3023d  	CALL	SPI_init		; init SPI FLASH
+ 156  003  30270  	CALL	DNA_init		; init device DNA
+ 157              
+ 158  004  30262  	CALL	read_spi_flash_status
+ 159              
+ 160              	; Init output lines
+ 161  005  00000  	LOAD	s0, 0
+ 162  006  2c003  	OUTPUT	s0, VIDEO_WR
+ 163  007  2c007  	OUTPUT	s0, KEY_READ
+ 164              
+ 165  008  2c080  	OUTPUT	s0, RAM_WR_CK_port
+ 166  009  2c081  	OUTPUT	s0, RAM_DOUT_port
+ 167  00a  2c082  	OUTPUT	s0, RAM_ADDR_L_port
+ 168  00b  2c083  	OUTPUT	s0, RAM_ADDR_H_port
+ 169              
+ 170              ;	STORE	s0, CPU_FREQ_SEL
+ 171              ;	OUTPUT	s0, CPU_SEL_port
+ 172              
+ 173              ;	STORE	s0, FLASH_IMAGE_NUMBER
+ 174  00c  2e009  	STORE	s0, FLASH_PAGE_NUMBER
+ 175  00d  2e00a  	STORE	s0, FLASH_EXT_ADDR
+ 176              
+ 177  00e  00001  	LOAD	s0, 1
+ 178  00f  2c007  	OUTPUT	s0, KEY_READ
+ 179  010  2c004  	OUTPUT	s0, LINE_OUT
+ 180              
+ 181  011  00000  	LOAD	s0, 0
+ 182  012  2c007  	OUTPUT	s0, KEY_READ
+ 183              
+ 184              	;ENABLE INTERRUPT		; enable interrupts
+ 185              
+ 186              main_loop0:
+ 187              	; Wait for key press
+ 188  013  04002  	INPUT	s0, ESC_STATE
+ 189  014  12001  	TEST	s0, 1
+ 190  015  35c13  	JUMP	NC, main_loop0		; don't do anything if ESC_STATE = 0
+ 191              
+ 192              	; ESC state = 1
+ 193  016  00000  	LOAD	s0, 0
+ 194  017  301aa  	CALL	EraseScreen
+ 195              
+ 196  018  00000  	LOAD	s0, 0
+ 197  019  2e004  	STORE	s0, PRINT_TYPE
+ 198  01a  2e005  	STORE	s0, SEL_MENU_ITEM
+ 199  01b  2e006  	STORE	s0, CURR_MENU
+ 200  01c  00d00  	LOAD	sD, 0
+ 201  01d  00e00  	LOAD	sE, 0
+ 202              
+ 203              	; Print information about FLASH ID and Device DNA
+ 204  01e  30178  	CALL	Print_FLASH_ID
+ 205  01f  3018c  	CALL	Print_Device_DNA
+ 206              
+ 207              	; Print menu
+ 208  020  3011a  	CALL	Print_MainMenu
+ 209              
+ 210              main_menu_loop_wait_key:
+ 211  021  301c2  	CALL	GetKey
+ 212  022  140ff  	COMPARE	s0, FF
+ 213  023  35021  	JUMP	Z, main_menu_loop_wait_key	; the key is not pressed
+ 214  024  14076  	COMPARE	s0, 76
+ 215  025  35013  	JUMP	Z, main_loop0		; ESC key pressed
+ 216              
+ 217  026  06105  	FETCH	s1, SEL_MENU_ITEM
+ 218              
+ 219  027  140f2  	COMPARE	s0, F2
+ 220  028  3542d  	JUMP	NZ, main_menu_loop1	; down arrow
+ 221  029  18101  	ADD	s1, 1
+ 222  02a  14103  	COMPARE	s1, 3
+ 223  02b  3582d  	JUMP	C, main_menu_loop1
+ 224  02c  00100  	LOAD	s1, 0
+ 225              main_menu_loop1:
+ 226  02d  140f5  	COMPARE	s0, F5			; up arrow
+ 227  02e  35433  	JUMP	NZ, main_menu_loop2
+ 228  02f  1c101  	SUB	s1, 1
+ 229  030  141ff  	COMPARE	s1, FF
+ 230  031  35433  	JUMP	NZ, main_menu_loop2
+ 231  032  00102  	LOAD	s1, 2
+ 232              	
+ 233              main_menu_loop2:
+ 234  033  2e105  	STORE	s1, SEL_MENU_ITEM	; store the menu selection
+ 235              
+ 236  034  1405a  	COMPARE	s0, 5A			; enter key
+ 237  035  3543c  	JUMP	NZ, main_menu_loop3
+ 238              	; Enter key pressed
+ 239  036  14100  	COMPARE	s1, 0
+ 240  037  3503e  	JUMP	Z, load_mem_menu
+ 241  038  14101  	COMPARE	s1, 1
+ 242  039  3505c  	JUMP	Z, save_mem_menu
+ 243  03a  14102  	COMPARE	s1, 2
+ 244  03b  350c7  	JUMP	Z, cpu_freq_menu
+ 245              
+ 246              main_menu_loop3:
+ 247              	; Print menu
+ 248  03c  3011a  	CALL	Print_MainMenu
+ 249              
+ 250  03d  34021  	JUMP	main_menu_loop_wait_key
+ 251              
+ 252              ;*****************************************************************************-
+ 253              load_mem_menu:
+ 254  03e  00041  	LOAD	s0, 41
+ 255  03f  2e003  	STORE	s0, YPOS
+ 256  040  300ef  	CALL	PrintImageName
+ 257              
+ 258              
+ 259              load_mem_loop_wait_key:
+ 260  041  301c2  	CALL	GetKey
+ 261  042  140ff  	COMPARE	s0, FF
+ 262  043  35041  	JUMP	Z, load_mem_loop_wait_key	; the key is not pressed
+ 263  044  14076  	COMPARE	s0, 76
+ 264  045  35013  	JUMP	Z, main_loop0		; ESC key pressed
+ 265              
+ 266  046  06108  	FETCH	s1, FLASH_IMAGE_NUMBER
+ 267  047  140f2  	COMPARE	s0, F2
+ 268  048  3544d  	JUMP	NZ, load_mem_loop1	; down arrow
+ 269  049  18101  	ADD	s1, 1
+ 270  04a  14120  	COMPARE	s1, 20
+ 271  04b  3584d  	JUMP	C, load_mem_loop1
+ 272  04c  00100  	LOAD	s1, 0
+ 273              load_mem_loop1:
+ 274  04d  140f5  	COMPARE	s0, F5			; up arrow
+ 275  04e  35453  	JUMP	NZ, load_mem_loop2
+ 276  04f  1c101  	SUB	s1, 1
+ 277  050  141ff  	COMPARE	s1, FF
+ 278  051  35453  	JUMP	NZ, load_mem_loop2
+ 279  052  0011f  	LOAD	s1, 1F
+ 280              	
+ 281              load_mem_loop2:
+ 282  053  2e108  	STORE	s1, FLASH_IMAGE_NUMBER
+ 283  054  30207  	CALL	push_s0
+ 284  055  300ef  	CALL	PrintImageName
+ 285  056  3020a  	CALL	pop_s0
+ 286              
+ 287  057  1405a  	COMPARE	s0, 5A			; enter key
+ 288  058  3545b  	JUMP	NZ, load_mem_loop3
+ 289              	; Enter key pressed
+ 290              
+ 291  059  30341  	CALL	ReadRAMImage
+ 292              
+ 293  05a  34013  	JUMP	main_loop0
+ 294              
+ 295              load_mem_loop3:	
+ 296  05b  34041  	JUMP	load_mem_loop_wait_key
+ 297              ;*****************************************************************************-
+ 298              save_mem_menu:
+ 299  05c  0004e  	LOAD	s0, 4E
+ 300  05d  2e003  	STORE	s0, YPOS
+ 301  05e  300ef  	CALL	PrintImageName
+ 302              
+ 303              save_mem_loop_wait_key:
+ 304  05f  301c2  	CALL	GetKey
+ 305  060  140ff  	COMPARE	s0, FF
+ 306  061  3505f  	JUMP	Z, save_mem_loop_wait_key	; the key is not pressed
+ 307  062  14076  	COMPARE	s0, 76
+ 308  063  35013  	JUMP	Z, main_loop0		; ESC key pressed
+ 309              
+ 310  064  06108  	FETCH	s1, FLASH_IMAGE_NUMBER
+ 311  065  140f2  	COMPARE	s0, F2
+ 312  066  3546b  	JUMP	NZ, save_mem_loop1	; down arrow
+ 313  067  18101  	ADD	s1, 1
+ 314  068  14120  	COMPARE	s1, 20
+ 315  069  3586b  	JUMP	C, save_mem_loop1
+ 316  06a  00100  	LOAD	s1, 0
+ 317              save_mem_loop1:
+ 318  06b  140f5  	COMPARE	s0, F5			; up arrow
+ 319  06c  35471  	JUMP	NZ, save_mem_loop2
+ 320  06d  1c101  	SUB	s1, 1
+ 321  06e  141ff  	COMPARE	s1, FF
+ 322  06f  35471  	JUMP	NZ, save_mem_loop2
+ 323  070  0011f  	LOAD	s1, 1F
+ 324              	
+ 325              save_mem_loop2:
+ 326  071  2e108  	STORE	s1, FLASH_IMAGE_NUMBER
+ 327  072  30207  	CALL	push_s0
+ 328  073  300ef  	CALL	PrintImageName
+ 329  074  3020a  	CALL	pop_s0
+ 330              
+ 331  075  1405a  	COMPARE	s0, 5A			; enter key
+ 332  076  3547a  	JUMP	NZ, save_mem_loop3
+ 333              	; Enter key pressed
+ 334              
+ 335  077  3007b  	CALL	InputImageName		; Get the image name from keyboard
+ 336  078  302e5  	CALL	WriteRAMImage
+ 337              
+ 338  079  34013  	JUMP	main_loop0
+ 339              
+ 340              save_mem_loop3:	
+ 341  07a  3405f  	JUMP	save_mem_loop_wait_key
+ 342              ;*****************************************************************************-
+ 343              InputImageName:
+ 344              ; Get the input image name from keyboard
+ 345              ; Input is done with up arrow, down arrow and enter key
+ 346  07b  30207  	CALL	push_s0
+ 347  07c  00041  	LOAD	s0, character_A
+ 348  07d  2e010  	STORE	s0, FLASH_IMAGE_NAME0
+ 349  07e  2e011  	STORE	s0, FLASH_IMAGE_NAME1
+ 350  07f  2e012  	STORE	s0, FLASH_IMAGE_NAME2
+ 351  080  2e013  	STORE	s0, FLASH_IMAGE_NAME3
+ 352  081  2e014  	STORE	s0, FLASH_IMAGE_NAME4
+ 353  082  2e015  	STORE	s0, FLASH_IMAGE_NAME5
+ 354  083  2e016  	STORE	s0, FLASH_IMAGE_NAME6
+ 355  084  2e017  	STORE	s0, FLASH_IMAGE_NAME7
+ 356  085  00000  	LOAD	s0, 0
+ 357  086  2e00c  	STORE	s0, CURRENT_CHARACTER
+ 358              
+ 359  087  300ab  	CALL	InputImageName_Print
+ 360              
+ 361              InputImageName_wait_key:
+ 362  088  301c2  	CALL	GetKey
+ 363  089  140ff  	COMPARE	s0, FF
+ 364  08a  35088  	JUMP	Z, InputImageName_wait_key	; the key is not pressed
+ 365  08b  14076  	COMPARE	s0, 76
+ 366  08c  35013  	JUMP	Z, main_loop0		; ESC key pressed
+ 367              
+ 368  08d  0610c  	FETCH	s1, CURRENT_CHARACTER
+ 369  08e  140eb  	COMPARE	s0, EB
+ 370  08f  35494  	JUMP	NZ, InputImageName_loop1	; left arrow
+ 371  090  1c101  	SUB	s1, 1
+ 372  091  141ff  	COMPARE	s1, FF
+ 373  092  35494  	JUMP	NZ, InputImageName_loop1
+ 374  093  00100  	LOAD	s1, 0
+ 375              InputImageName_loop1:
+ 376  094  140f4  	COMPARE	s0, F4			; right arrow
+ 377  095  3549a  	JUMP	NZ, InputImageName_loop2
+ 378  096  18101  	ADD	s1, 1
+ 379  097  14108  	COMPARE	s1, 08
+ 380  098  3549a  	JUMP	NZ, InputImageName_loop2
+ 381  099  00107  	LOAD	s1, 07
+ 382              
+ 383              InputImageName_loop2:
+ 384  09a  2e10c  	STORE	s1, CURRENT_CHARACTER
+ 385              
+ 386  09b  1405a  	COMPARE	s0, 5A			; enter key
+ 387  09c  3549e  	JUMP	NZ, InputImageName_loop3
+ 388              	; Enter key pressed
+ 389  09d  2a000  	RETURN
+ 390              
+ 391              InputImageName_loop3:
+ 392  09e  00110  	LOAD	s1, FLASH_IMAGE_NAME0
+ 393  09f  0620c  	FETCH	s2, CURRENT_CHARACTER
+ 394  0a0  19210  	ADD	s2, s1
+ 395  0a1  07120  	FETCH	s1, (s2)
+ 396  0a2  140f2  	COMPARE	s0, F2
+ 397  0a3  354a5  	JUMP	NZ, InputImageName_loop4	; down arrow
+ 398  0a4  1c101  	SUB	s1, 1
+ 399              InputImageName_loop4:
+ 400  0a5  140f5  	COMPARE	s0, F5			; up arrow
+ 401  0a6  354a8  	JUMP	NZ, InputImageName_loop5
+ 402  0a7  18101  	ADD	s1, 1
+ 403              InputImageName_loop5:
+ 404  0a8  2f120  	STORE	s1, (s2)
+ 405              
+ 406  0a9  300ab  	CALL	InputImageName_Print
+ 407              	
+ 408  0aa  34088  	JUMP	InputImageName_wait_key
+ 409              
+ 410              
+ 411              ;*****************************************************************************-
+ 412              InputImageName_Print:
+ 413  0ab  30207  	CALL	push_s0
+ 414  0ac  3020d  	CALL	push_s1
+ 415  0ad  30213  	CALL	push_s2
+ 416  0ae  00060  	LOAD	s0, 60
+ 417  0af  2e002  	STORE	s0, XPOS
+ 418              
+ 419  0b0  06008  	FETCH	s0, FLASH_IMAGE_NUMBER
+ 420  0b1  301ff  	CALL	PrintHex
+ 421              
+ 422  0b2  00020  	LOAD	s0, 20
+ 423  0b3  301cd  	CALL	PrintCharacter
+ 424              
+ 425  0b4  00200  	LOAD	s2, 0	; curr char
+ 426              
+ 427              InputImageName_Print0:
+ 428  0b5  00000  	LOAD	s0, 0
+ 429  0b6  2e004  	STORE	s0, PRINT_TYPE
+ 430  0b7  0610c  	FETCH	s1, CURRENT_CHARACTER
+ 431  0b8  15120  	COMPARE	s1, s2
+ 432  0b9  354bc  	JUMP	NZ, InputImageName_Print1
+ 433  0ba  00001  	LOAD	s0, 1
+ 434  0bb  2e004  	STORE	s0, PRINT_TYPE
+ 435              InputImageName_Print1:
+ 436  0bc  00110  	LOAD	s1, FLASH_IMAGE_NAME0
+ 437  0bd  19120  	ADD	s1, s2
+ 438  0be  07010  	FETCH	s0, (s1)		
+ 439  0bf  30204  	CALL	PrintASCII
+ 440              
+ 441  0c0  18201  	ADD	s2, 1
+ 442  0c1  14208  	COMPARE	s2, 8
+ 443  0c2  354b5  	JUMP	NZ, InputImageName_Print0
+ 444              
+ 445  0c3  30216  	CALL	pop_s2
+ 446  0c4  30210  	CALL	pop_s1
+ 447  0c5  3020a  	CALL	pop_s0
+ 448  0c6  2a000  	RETURN	
+ 449              
+ 450              
+ 451              ;*****************************************************************************-
+ 452              
+ 453              cpu_freq_menu:
+ 454  0c7  00000  	LOAD	s0, 0
+ 455  0c8  2e004  	STORE	s0, PRINT_TYPE
+ 456              	
+ 457  0c9  0005b  	LOAD	s0, 5B
+ 458  0ca  2e003  	STORE	s0, YPOS
+ 459  0cb  000c0  	LOAD	s0, C0
+ 460  0cc  2e002  	STORE	s0, XPOS
+ 461              
+ 462  0cd  06007  	FETCH	s0, CPU_FREQ_SEL
+ 463  0ce  301ff  	CALL	PrintHex
+ 464              
+ 465              cpu_freq_loop_wait_key:
+ 466  0cf  301c2  	CALL	GetKey
+ 467  0d0  140ff  	COMPARE	s0, FF
+ 468  0d1  350cf  	JUMP	Z, cpu_freq_loop_wait_key	; the key is not pressed
+ 469  0d2  14076  	COMPARE	s0, 76
+ 470  0d3  35013  	JUMP	Z, main_loop0		; ESC key pressed
+ 471              
+ 472  0d4  06107  	FETCH	s1, CPU_FREQ_SEL
+ 473              
+ 474  0d5  140f5  	COMPARE	s0, F5
+ 475  0d6  354db  	JUMP	NZ, cpu_freq_loop1	; down arrow
+ 476  0d7  18101  	ADD	s1, 1
+ 477  0d8  14104  	COMPARE	s1, 4
+ 478  0d9  358db  	JUMP	C, cpu_freq_loop1
+ 479  0da  00103  	LOAD	s1, 3
+ 480              cpu_freq_loop1:
+ 481  0db  140f2  	COMPARE	s0, F2			; up arrow
+ 482  0dc  354e1  	JUMP	NZ, cpu_freq_loop2
+ 483  0dd  1c101  	SUB	s1, 1
+ 484  0de  141ff  	COMPARE	s1, FF
+ 485  0df  354e1  	JUMP	NZ, cpu_freq_loop2
+ 486  0e0  00100  	LOAD	s1, 0
+ 487              	
+ 488              cpu_freq_loop2:
+ 489  0e1  2e107  	STORE	s1, CPU_FREQ_SEL
+ 490              
+ 491  0e2  01200  	LOAD	s2, s0
+ 492              
+ 493  0e3  0005b  	LOAD	s0, 5B
+ 494  0e4  2e003  	STORE	s0, YPOS
+ 495  0e5  000c0  	LOAD	s0, C0
+ 496  0e6  2e002  	STORE	s0, XPOS
+ 497              
+ 498  0e7  01010  	LOAD	s0, s1
+ 499  0e8  301ff  	CALL	PrintHex
+ 500              
+ 501  0e9  1425a  	COMPARE	s2, 5A			; enter key
+ 502  0ea  354ee  	JUMP	NZ, cpu_freq_loop3
+ 503              	; Enter key is pressed
+ 504  0eb  06007  	FETCH	s0, CPU_FREQ_SEL
+ 505  0ec  2c020  	OUTPUT	s0, CPU_SEL_port
+ 506              
+ 507  0ed  34013  	JUMP	main_loop0
+ 508              
+ 509              cpu_freq_loop3:
+ 510  0ee  340cf  	JUMP cpu_freq_loop_wait_key
+ 511              
+ 512              
+ 513              ;*****************************************************************************-
+ 514              ; Prints RAM image name
+ 515              ;*****************************************************************************-
+ 516              ; YPOS position must be set by the calling procedure!
+ 517              PrintImageName:
+ 518  0ef  30320  	CALL	ReadRAMImageName
+ 519              
+ 520  0f0  00060  	LOAD	s0, 60
+ 521  0f1  2e002  	STORE	s0, XPOS
+ 522              
+ 523  0f2  06008  	FETCH	s0, FLASH_IMAGE_NUMBER
+ 524  0f3  301ff  	CALL	PrintHex
+ 525              
+ 526  0f4  00020  	LOAD	s0, 20
+ 527  0f5  301cd  	CALL	PrintCharacter
+ 528              
+ 529  0f6  06010  	FETCH	s0, FLASH_IMAGE_NAME0
+ 530  0f7  140ff  	COMPARE	s0, FF
+ 531  0f8  35109  	JUMP	Z, PrintImageName_Empty
+ 532              
+ 533  0f9  30204  	CALL	PrintASCII
+ 534              
+ 535  0fa  06011  	FETCH	s0, FLASH_IMAGE_NAME1
+ 536  0fb  30204  	CALL	PrintASCII
+ 537              
+ 538  0fc  06012  	FETCH	s0, FLASH_IMAGE_NAME2
+ 539  0fd  30204  	CALL	PrintASCII
+ 540              
+ 541  0fe  06013  	FETCH	s0, FLASH_IMAGE_NAME3
+ 542  0ff  30204  	CALL	PrintASCII
+ 543              
+ 544  100  06014  	FETCH	s0, FLASH_IMAGE_NAME4
+ 545  101  30204  	CALL	PrintASCII
+ 546              
+ 547  102  06015  	FETCH	s0, FLASH_IMAGE_NAME5
+ 548  103  30204  	CALL	PrintASCII
+ 549              
+ 550  104  06016  	FETCH	s0, FLASH_IMAGE_NAME6
+ 551  105  30204  	CALL	PrintASCII
+ 552              
+ 553  106  06017  	FETCH	s0, FLASH_IMAGE_NAME7
+ 554  107  30204  	CALL	PrintASCII
+ 555              
+ 556  108  2a000  	RETURN
+ 557              
+ 558              PrintImageName_Empty:
+ 559  109  00020  	LOAD	s0, 20
+ 560  10a  301cd  	CALL	PrintCharacter
+ 561  10b  00020  	LOAD	s0, 20
+ 562  10c  301cd  	CALL	PrintCharacter
+ 563  10d  00045  	LOAD	s0, character_E
+ 564  10e  30204  	CALL	PrintASCII
+ 565  10f  0004d  	LOAD	s0, character_M
+ 566  110  30204  	CALL	PrintASCII
+ 567  111  00050  	LOAD	s0, character_P
+ 568  112  30204  	CALL	PrintASCII
+ 569  113  00054  	LOAD	s0, character_T
+ 570  114  30204  	CALL	PrintASCII
+ 571  115  00059  	LOAD	s0, character_Y
+ 572  116  30204  	CALL	PrintASCII
+ 573  117  00020  	LOAD	s0, 20
+ 574  118  301cd  	CALL	PrintCharacter
+ 575  119  2a000  	RETURN
+ 576              
+ 577              ;*****************************************************************************-
+ 578              ; Prints the Galaksija main menu to predefined screen position
+ 579              ;*****************************************************************************-
+ 580              Print_MainMenu:
+ 581              
+ 582  11a  00000  	LOAD	s0, 0
+ 583  11b  2e004  	STORE	s0, PRINT_TYPE
+ 584              
+ 585  11c  06005  	FETCH	s0, SEL_MENU_ITEM
+ 586  11d  14000  	COMPARE	s0, 0
+ 587  11e  35521  	JUMP	NZ, Print_MainMenu_1
+ 588              
+ 589  11f  00001  	LOAD	s0, 1
+ 590  120  2e004  	STORE	s0, PRINT_TYPE
+ 591              Print_MainMenu_1:
+ 592  121  00041  	LOAD	s0, 41
+ 593  122  2e003  	STORE	s0, YPOS
+ 594  123  00060  	LOAD	s0, 60
+ 595  124  2e002  	STORE	s0, XPOS
+ 596              
+ 597  125  00020  	LOAD	s0, 20
+ 598  126  301cd  	CALL	PrintCharacter
+ 599              
+ 600  127  0004c  	LOAD	s0, character_L
+ 601  128  30204  	CALL	PrintASCII
+ 602  129  0004f  	LOAD	s0, character_O
+ 603  12a  30204  	CALL	PrintASCII
+ 604  12b  00041  	LOAD	s0, character_A
+ 605  12c  30204  	CALL	PrintASCII
+ 606  12d  00044  	LOAD	s0, character_D
+ 607  12e  30204  	CALL	PrintASCII
+ 608              
+ 609  12f  00020  	LOAD	s0, 20
+ 610  130  301cd  	CALL	PrintCharacter
+ 611              
+ 612  131  0004d  	LOAD	s0, character_M
+ 613  132  30204  	CALL	PrintASCII
+ 614  133  00045  	LOAD	s0, character_E
+ 615  134  30204  	CALL	PrintASCII
+ 616  135  0004d  	LOAD	s0, character_M
+ 617  136  30204  	CALL	PrintASCII
+ 618              	
+ 619              
+ 620  137  00020  	LOAD	s0, 20
+ 621  138  301cd  	CALL	PrintCharacter
+ 622              
+ 623              
+ 624  139  00000  	LOAD	s0, 0
+ 625  13a  2e004  	STORE	s0, PRINT_TYPE
+ 626              
+ 627  13b  06005  	FETCH	s0, SEL_MENU_ITEM
+ 628  13c  14001  	COMPARE	s0, 1
+ 629  13d  35540  	JUMP	NZ, Print_MainMenu_2
+ 630              
+ 631  13e  00001  	LOAD	s0, 1
+ 632  13f  2e004  	STORE	s0, PRINT_TYPE
+ 633              
+ 634              Print_MainMenu_2:
+ 635  140  0004e  	LOAD	s0, 4E
+ 636  141  2e003  	STORE	s0, YPOS
+ 637  142  00060  	LOAD	s0, 60
+ 638  143  2e002  	STORE	s0, XPOS
+ 639              
+ 640  144  00020  	LOAD	s0, 20
+ 641  145  301cd  	CALL	PrintCharacter
+ 642              
+ 643  146  00053  	LOAD	s0, character_S
+ 644  147  30204  	CALL	PrintASCII
+ 645  148  00041  	LOAD	s0, character_A
+ 646  149  30204  	CALL	PrintASCII
+ 647  14a  00056  	LOAD	s0, character_V
+ 648  14b  30204  	CALL	PrintASCII
+ 649  14c  00045  	LOAD	s0, character_E
+ 650  14d  30204  	CALL	PrintASCII
+ 651              
+ 652  14e  00020  	LOAD	s0, 20
+ 653  14f  301cd  	CALL	PrintCharacter
+ 654              
+ 655  150  0004d  	LOAD	s0, character_M
+ 656  151  30204  	CALL	PrintASCII
+ 657  152  00045  	LOAD	s0, character_E
+ 658  153  30204  	CALL	PrintASCII
+ 659  154  0004d  	LOAD	s0, character_M
+ 660  155  30204  	CALL	PrintASCII
+ 661              
+ 662  156  00020  	LOAD	s0, 20
+ 663  157  301cd  	CALL	PrintCharacter
+ 664              
+ 665              
+ 666  158  00000  	LOAD	s0, 0
+ 667  159  2e004  	STORE	s0, PRINT_TYPE
+ 668              
+ 669  15a  06005  	FETCH	s0, SEL_MENU_ITEM
+ 670  15b  14002  	COMPARE	s0, 2
+ 671  15c  3555f  	JUMP	NZ, Print_MainMenu_3
+ 672              
+ 673  15d  00001  	LOAD	s0, 1
+ 674  15e  2e004  	STORE	s0, PRINT_TYPE
+ 675              
+ 676              Print_MainMenu_3:
+ 677  15f  0005b  	LOAD	s0, 5B
+ 678  160  2e003  	STORE	s0, YPOS
+ 679  161  00060  	LOAD	s0, 60
+ 680  162  2e002  	STORE	s0, XPOS
+ 681              
+ 682  163  00020  	LOAD	s0, 20
+ 683  164  301cd  	CALL	PrintCharacter
+ 684              
+ 685  165  00043  	LOAD	s0, character_C
+ 686  166  30204  	CALL	PrintASCII
+ 687  167  00050  	LOAD	s0, character_P
+ 688  168  30204  	CALL	PrintASCII
+ 689  169  00055  	LOAD	s0, character_U
+ 690  16a  30204  	CALL	PrintASCII
+ 691              
+ 692  16b  00020  	LOAD	s0, 20
+ 693  16c  301cd  	CALL	PrintCharacter
+ 694              
+ 695  16d  00046  	LOAD	s0, character_F
+ 696  16e  30204  	CALL	PrintASCII
+ 697  16f  00052  	LOAD	s0, character_R
+ 698  170  30204  	CALL	PrintASCII
+ 699  171  00045  	LOAD	s0, character_E
+ 700  172  30204  	CALL	PrintASCII
+ 701  173  00051  	LOAD	s0, character_Q
+ 702  174  30204  	CALL	PrintASCII
+ 703              
+ 704  175  00020  	LOAD	s0, 20
+ 705  176  301cd  	CALL	PrintCharacter
+ 706              
+ 707  177  2a000  	RETURN	
+ 708              
+ 709              ;*****************************************************************************-
+ 710              ; Prints the FLASH ID to predefined screen position
+ 711              ;*****************************************************************************-
+ 712              Print_FLASH_ID:
+ 713              	; Set XPOS and YPOS for printing
+ 714  178  000ae  	LOAD	s0, AE
+ 715  179  2e003  	STORE	s0, YPOS
+ 716  17a  00001  	LOAD	s0, 1
+ 717  17b  2e002  	STORE	s0, XPOS
+ 718              
+ 719  17c  00046  	LOAD	s0, character_F
+ 720  17d  30204  	CALL	PrintASCII
+ 721  17e  00049  	LOAD	s0, character_I
+ 722  17f  30204  	CALL	PrintASCII
+ 723  180  00044  	LOAD	s0, character_D
+ 724  181  30204  	CALL	PrintASCII
+ 725              
+ 726  182  00020  	LOAD	s0, 20
+ 727  183  301cd  	CALL	PrintCharacter
+ 728              	
+ 729  184  30257  	CALL	read_FLASH_ID
+ 730  185  01090  	LOAD	s0, s9		; Manufacturer ID
+ 731  186  301ff  	CALL	PrintHex
+ 732  187  01080  	LOAD	s0, s8		; Device ID part 1
+ 733  188  301ff  	CALL	PrintHex
+ 734  189  01070  	LOAD	s0, s7
+ 735  18a  301ff  	CALL	PrintHex
+ 736  18b  2a000  	RETURN	
+ 737              
+ 738              ;*****************************************************************************-
+ 739              ; Prints the Device DNA to predefined screen position
+ 740              ;*****************************************************************************-
+ 741              Print_Device_DNA:
+ 742              	; Set XPOS and YPOS for printing
+ 743  18c  000be  	LOAD	s0, BE
+ 744  18d  2e003  	STORE	s0, YPOS
+ 745  18e  00001  	LOAD	s0, 1
+ 746  18f  2e002  	STORE	s0, XPOS
+ 747              
+ 748  190  00044  	LOAD	s0, character_D
+ 749  191  30204  	CALL	PrintASCII
+ 750  192  0004e  	LOAD	s0, character_N
+ 751  193  30204  	CALL	PrintASCII
+ 752  194  00041  	LOAD	s0, character_A
+ 753  195  30204  	CALL	PrintASCII
+ 754              	
+ 755  196  00020  	LOAD	s0, 20
+ 756  197  301cd  	CALL	PrintCharacter
+ 757              
+ 758  198  30273  	CALL	read_device_DNA
+ 759  199  010a0  	LOAD	s0, sA
+ 760  19a  301ff  	CALL	PrintHex
+ 761  19b  01090  	LOAD	s0, s9
+ 762  19c  301ff  	CALL	PrintHex
+ 763  19d  01080  	LOAD	s0, s8
+ 764  19e  301ff  	CALL	PrintHex
+ 765  19f  01070  	LOAD	s0, s7
+ 766  1a0  301ff  	CALL	PrintHex
+ 767  1a1  01060  	LOAD	s0, s6
+ 768  1a2  301ff  	CALL	PrintHex
+ 769  1a3  01050  	LOAD	s0, s5
+ 770  1a4  301ff  	CALL	PrintHex
+ 771  1a5  01040  	LOAD	s0, s4
+ 772  1a6  301ff  	CALL	PrintHex
+ 773  1a7  01030  	LOAD	s0, s3
+ 774  1a8  301ff  	CALL	PrintHex
+ 775              
+ 776  1a9  2a000  	RETURN
+ 777              	
+ 778              ;*****************************************************************************-
+ 779              ; Erase screen with bit set in s0
+ 780              ;*****************************************************************************-
+ 781              
+ 782              EraseScreen:
+ 783  1aa  2c002  	OUTPUT	s0, VIDEO_DATA
+ 784              	
+ 785  1ab  3020d  	CALL	push_s1
+ 786  1ac  30213  	CALL	push_s2
+ 787  1ad  30219  	CALL	push_s3	
+ 788              
+ 789  1ae  00000  	LOAD	s0, 0
+ 790  1af  001d0  	LOAD	s1, D0
+ 791              
+ 792  1b0  00200  	LOAD	s2, 0
+ 793  1b1  00301  	LOAD	s3, 1
+ 794              
+ 795              EraseScreen_l1:
+ 796  1b2  2c000  	OUTPUT	s0, VIDEO_ADDR_L
+ 797  1b3  2c101  	OUTPUT	s1, VIDEO_ADDR_H
+ 798              
+ 799  1b4  2c203  	OUTPUT	s2, VIDEO_WR
+ 800  1b5  2c303  	OUTPUT	s3, VIDEO_WR
+ 801  1b6  2c203  	OUTPUT	s2, VIDEO_WR
+ 802              		
+ 803  1b7  1c001  	SUB	s0, 1
+ 804  1b8  14000  	COMPARE	s0, 0
+ 805  1b9  355b2  	JUMP	NZ, EraseScreen_l1
+ 806  1ba  1c101  	SUB	s1, 1
+ 807  1bb  141ff  	COMPARE	s1, FF
+ 808  1bc  355b2  	JUMP	NZ, EraseScreen_l1
+ 809              
+ 810  1bd  2c103  	OUTPUT	s1, VIDEO_WR
+ 811              
+ 812  1be  3021c  	CALL	pop_s3
+ 813  1bf  30216  	CALL	pop_s2
+ 814  1c0  30210  	CALL	pop_s1
+ 815              
+ 816  1c1  2a000  	RETURN		
+ 817              	
+ 818              ;*****************************************************************************-
+ 819              ; Gets the pressed key in s0. if the key is not pressed returns FF
+ 820              ;*****************************************************************************-
+ 821              GetKey:		
+ 822  1c2  04001  	INPUT	s0, KEY_STICKY
+ 823  1c3  12001  	TEST	s0, 1
+ 824  1c4  35dcb  	JUMP	NC, GetKey_retFF
+ 825  1c5  00001  	LOAD	s0, 1
+ 826  1c6  2c007  	OUTPUT	s0, KEY_READ
+ 827  1c7  00000  	LOAD	s0, 0
+ 828  1c8  2c007  	OUTPUT	s0, KEY_READ
+ 829  1c9  04000  	INPUT	s0, KEY_CODE
+ 830  1ca  2a000  	RETURN
+ 831              
+ 832              GetKey_retFF:
+ 833  1cb  000ff  	LOAD	s0, FF
+ 834  1cc  2a000  	RETURN
+ 835              
+ 836              ;*****************************************************************************-
+ 837              ; Prints the character
+ 838              ; s0 - character to print
+ 839              ; X position is read from XPOS scratch pad
+ 840              ; Y position is read from YPOS scratch pad
+ 841              ; Returns coordinates for next character
+ 842              ;*****************************************************************************-
+ 843              PrintCharacter:
+ 844  1cd  3020d  	CALL	push_s1
+ 845  1ce  30213  	CALL	push_s2
+ 846  1cf  30219  	CALL	push_s3
+ 847  1d0  3021f  	CALL	push_s4
+ 848  1d1  30225  	CALL	push_s5
+ 849  1d2  3022b  	CALL	push_s6
+ 850  1d3  30231  	CALL	push_s7
+ 851  1d4  30237  	CALL	push_s8
+ 852              
+ 853  1d5  06102  	FETCH	s1, XPOS
+ 854  1d6  06203  	FETCH	s2, YPOS
+ 855              
+ 856  1d7  2c005  	OUTPUT	s0, CH_ADDR_L
+ 857              
+ 858  1d8  0080d  	LOAD	s8, 0D
+ 859  1d9  00300  	LOAD	s3, 0
+ 860              
+ 861              PrintCharacter_Y:
+ 862  1da  2c306  	OUTPUT	s3, CH_ADDR_H
+ 863              	
+ 864  1db  04407  	INPUT	s4, CH_DATA	; read the data from character ROM
+ 865  1dc  00708  	LOAD	s7, 8
+ 866              	
+ 867              PrintCharacter_X:
+ 868  1dd  06504  	FETCH	s5, PRINT_TYPE	; 0 - normal, 1 - inverted
+ 869  1de  20406  	SL0	s4
+ 870  1df  359e1  	JUMP	C, PrintCharacter_bit
+ 871  1e0  0e5ff  	XOR	s5, FF
+ 872              PrintCharacter_bit:
+ 873  1e1  2c502  	OUTPUT	s5, VIDEO_DATA
+ 874  1e2  2c100  	OUTPUT	s1, VIDEO_ADDR_L
+ 875  1e3  2c201  	OUTPUT	s2, VIDEO_ADDR_H
+ 876              
+ 877              	; pulse clock
+ 878  1e4  00600  	LOAD	s6, 0
+ 879  1e5  2c603  	OUTPUT	s6, VIDEO_WR
+ 880  1e6  00601  	LOAD	s6, 1
+ 881  1e7  2c603  	OUTPUT	s6, VIDEO_WR
+ 882  1e8  00600  	LOAD	s6, 0
+ 883  1e9  2c603  	OUTPUT	s6, VIDEO_WR
+ 884              
+ 885  1ea  18101  	ADD	s1, 1
+ 886  1eb  1c701  	SUB	s7, 1
+ 887  1ec  355dd  	JUMP	NZ, PrintCharacter_X
+ 888              
+ 889  1ed  1c108  	SUB	s1, 8
+ 890  1ee  18301  	ADD	s3, 1
+ 891  1ef  18201  	ADD	s2, 1
+ 892              
+ 893  1f0  1c801  	SUB	s8, 1
+ 894  1f1  355da  	JUMP	NZ, PrintCharacter_Y
+ 895              
+ 896  1f2  1c20d  	SUB	s2, 0D
+ 897  1f3  18108  	ADD	s1, 8
+ 898              
+ 899  1f4  2e102  	STORE	s1,XPOS
+ 900  1f5  2e203  	STORE	s2, YPOS
+ 901              	
+ 902  1f6  3023a  	CALL	pop_s8
+ 903  1f7  30234  	CALL	pop_s7
+ 904  1f8  3022e  	CALL	pop_s6
+ 905  1f9  30228  	CALL	pop_s5
+ 906  1fa  30222  	CALL	pop_s4
+ 907  1fb  3021c  	CALL	pop_s3
+ 908  1fc  30216  	CALL	pop_s2
+ 909  1fd  30210  	CALL	pop_s1
+ 910  1fe  2a000  	RETURN
+ 911              
+ 912              ;*****************************************************************************-
+ 913              ; Prints the hex representation of byte to current screen position
+ 914              ;*****************************************************************************-
+ 915              ; Input:
+ 916              ; s0 - byte to print
+ 917              PrintHex:
+ 918  1ff  3028e  	CALL	Byte2Hex		; after return s0 contains upper nibble, s1 contains lower nibble ASCII
+ 919  200  301cd  	CALL	PrintCharacter
+ 920  201  01010  	LOAD	s0, s1
+ 921  202  301cd  	CALL	PrintCharacter
+ 922  203  2a000  	RETURN
+ 923              ;*****************************************************************************-
+ 924              ; Prints the ASCII char to current screen position
+ 925              ;*****************************************************************************-
+ 926              ; Input:
+ 927              ; s0 - ASCII
+ 928              PrintASCII:
+ 929  204  302a4  	CALL	ASCII2CHROM
+ 930  205  301cd  	CALL	PrintCharacter
+ 931  206  2a000  	RETURN
+ 932              		
+ 933              ;*****************************************************************************-
+ 934              ; Stack operation subs
+ 935              ;*****************************************************************************-
+ 936              
+ 937              push_s0:
+ 938  207  2f0f0  	STORE	s0, (stack_pointer)
+ 939  208  18f01  	ADD	stack_pointer, 01
+ 940  209  2a000  	RETURN
+ 941              
+ 942              pop_s0:
+ 943  20a  1cf01  	SUB	stack_pointer, 01
+ 944  20b  070f0  	FETCH	s0, (stack_pointer)
+ 945  20c  2a000  	RETURN
+ 946              ;*****************************************************************************-
+ 947              push_s1:
+ 948  20d  2f1f0  	STORE	s1, (stack_pointer)
+ 949  20e  18f01  	ADD	stack_pointer, 01
+ 950  20f  2a000  	RETURN
+ 951              
+ 952              pop_s1:
+ 953  210  1cf01  	SUB	stack_pointer, 01
+ 954  211  071f0  	FETCH	s1, (stack_pointer)
+ 955  212  2a000  	RETURN
+ 956              ;*****************************************************************************-
+ 957              push_s2:
+ 958  213  2f2f0  	STORE	s2, (stack_pointer)
+ 959  214  18f01  	ADD	stack_pointer, 01
+ 960  215  2a000  	RETURN
+ 961              
+ 962              pop_s2:
+ 963  216  1cf01  	SUB	stack_pointer, 01
+ 964  217  072f0  	FETCH	s2, (stack_pointer)
+ 965  218  2a000  	RETURN
+ 966              ;*****************************************************************************-
+ 967              push_s3:
+ 968  219  2f3f0  	STORE	s3, (stack_pointer)
+ 969  21a  18f01  	ADD	stack_pointer, 01
+ 970  21b  2a000  	RETURN
+ 971              
+ 972              pop_s3:
+ 973  21c  1cf01  	SUB	stack_pointer, 01
+ 974  21d  073f0  	FETCH	s3, (stack_pointer)
+ 975  21e  2a000  	RETURN
+ 976              ;*****************************************************************************-
+ 977              push_s4:
+ 978  21f  2f4f0  	STORE	s4, (stack_pointer)
+ 979  220  18f01  	ADD	stack_pointer, 01
+ 980  221  2a000  	RETURN
+ 981              
+ 982              pop_s4:
+ 983  222  1cf01  	SUB	stack_pointer, 01
+ 984  223  074f0  	FETCH	s4, (stack_pointer)
+ 985  224  2a000  	RETURN
+ 986              ;*****************************************************************************-
+ 987              push_s5:
+ 988  225  2f5f0  	STORE	s5, (stack_pointer)
+ 989  226  18f01  	ADD	stack_pointer, 01
+ 990  227  2a000  	RETURN
+ 991              
+ 992              pop_s5:
+ 993  228  1cf01  	SUB	stack_pointer, 01
+ 994  229  075f0  	FETCH	s5, (stack_pointer)
+ 995  22a  2a000  	RETURN
+ 996              ;*****************************************************************************-
+ 997              push_s6:
+ 998  22b  2f6f0  	STORE	s6, (stack_pointer)
+ 999  22c  18f01  	ADD	stack_pointer, 01
+1000  22d  2a000  	RETURN
+1001              
+1002              pop_s6:
+1003  22e  1cf01  	SUB	stack_pointer, 01
+1004  22f  076f0  	FETCH	s6, (stack_pointer)
+1005  230  2a000  	RETURN
+1006              ;*****************************************************************************-
+1007              push_s7:
+1008  231  2f7f0  	STORE	s7, (stack_pointer)
+1009  232  18f01  	ADD	stack_pointer, 01
+1010  233  2a000  	RETURN
+1011              
+1012              pop_s7:
+1013  234  1cf01  	SUB	stack_pointer, 01
+1014  235  077f0  	FETCH	s7, (stack_pointer)
+1015  236  2a000  	RETURN
+1016              ;*****************************************************************************-
+1017              push_s8:
+1018  237  2f8f0  	STORE	s8, (stack_pointer)
+1019  238  18f01  	ADD	stack_pointer, 01
+1020  239  2a000  	RETURN
+1021              
+1022              pop_s8:
+1023  23a  1cf01  	SUB	stack_pointer, 01
+1024  23b  078f0  	FETCH	s8, (stack_pointer)
+1025  23c  2a000  	RETURN
+1026              
+1027              ;*****************************************************************************-
+1028              
+1029              
+1030              
+1031              
+1032              ;
+1033              ;**************************************************************************************
+1034              ; Initialise SPI bus
+1035              ;**************************************************************************************
+1036              ;
+1037              ; This routine should be used to initialise or disable the SPI bus.
+1038              ;
+1039              ;   SPI_sck      = 0   (bit0)   Clock is Low (prepares for first rising edge)
+1040              ;   SPI_rom_cs   = 1   (bit1)   Deselect ROM
+1041              ;   SPI_mosi     = 0   (bit7)   Data is Low
+1042              ;
+1043              ; Registers used s0
+1044              ;
+1045              SPI_init: 
+1046  23d  00002  	LOAD s0, 02
+1047  23e  2c008  	OUTPUT s0, SPI_out_port
+1048  23f  2e000  	STORE s0, SPI_bus_status               ;preserve bus status
+1049  240  2a000  	RETURN
+1050              ;
+1051              ;
+1052              ;**************************************************************************************
+1053              ; Enable the SPI FLASH
+1054              ;**************************************************************************************
+1055              ;
+1056              ; This routine is used enable the FLASH connected to the SPI bus.
+1057              ; The SPI_init routine must have been used previously.
+1058              ;   SPI_rom_cs   = 0   (bit1)   Select ROM
+1059              ;
+1060              ; Registers used s0
+1061              ;
+1062              SPI_flash_enable: 
+1063  241  3023d  	CALL SPI_init	  ;ensures bus state and defines value in s0
+1064  242  0e002  	XOR s0, SPI_rom_cs                     ;select (Low) FLASH
+1065  243  2c008  	OUTPUT s0, SPI_out_port                ;drive bus
+1066  244  2e000  	STORE s0, SPI_bus_status               ;preserve bus status
+1067  245  2a000  	RETURN
+1068              ;
+1069              ;
+1070              ;**************************************************************************************
+1071              ; Send and receive one byte on the SPI bus.
+1072              ;**************************************************************************************
+1073              ;
+1074              ; The data supplied in register 's3' is transmitted to the SPI bus and at the same
+1075              ; time any received byte is used to replace the value in 's3'. Communication is
+1076              ; MSB first with the clock 'SCK' generated by software resulting in a communication
+1077              ; rate of 1.786 Mbit/s with a 50MHz clock.
+1078              ;
+1079              ; Note that you must have previously selected the required device on the bus
+1080              ; before attempting communication and you must subsequently deselect the device
+1081              ; when appropriate.
+1082              ;
+1083              ; Entry to this routine assumes that SCK is already Low and the clock will be Low
+1084              ; at the end of execution (provided in scratch pad memory location SPI_bus_status).
+1085              ;
+1086              ; As a 'master' the signal sequence for each bit is as follows..
+1087              ;   Transmit data bit on MOSI
+1088              ;   Receive data bit from MISO (FLASH memory transmits on previous falling edge)
+1089              ;   Drive SCK transition from low to high
+1090              ;   Drive SCK transition from high to low.
+1091              ;
+1092              ; Registers used s0,s1,s2,s3
+1093              ;
+1094              SPI_tx_rx: 
+1095  246  00108  	LOAD s1, 08			;8-bits to transmit and receive
+1096  247  06000  	FETCH s0, SPI_bus_status	;read current bus status
+1097              next_SPI_tx_rx_bit: 
+1098  248  01230  	LOAD s2, s3			;determine next MOSI to be transmitted
+1099  249  0a280  	AND s2, 80			;isolate bit in transmit byte
+1100  24a  0a07f  	AND s0, 7F			;clear bit7 ready for MOSI
+1101  24b  0d020  	OR s0, s2			;set bit7 to drive MOSI if data is High
+1102  24c  2c008  	OUTPUT s0, SPI_out_port
+1103  24d  04205  	INPUT s2, SPI_in_port		;read MISO
+1104  24e  12201  	TEST s2, SPI_miso		;detect state of received bit
+1105  24f  20300  	SLA s3				;shift new data into result and move to next transmit bit
+1106  250  0e001  	XOR s0, SPI_sck			;drive SCK clock High
+1107  251  2c008  	OUTPUT s0, SPI_out_port
+1108  252  0e001  	XOR s0, SPI_sck			;drive SCK clock Low
+1109  253  2c008  	OUTPUT s0, SPI_out_port
+1110  254  1c101  	SUB s1, 01
+1111  255  35648  	JUMP NZ, next_SPI_tx_rx_bit	;repeat until finished
+1112  256  2a000  	RETURN
+1113              
+1114              
+1115              ;**************************************************************************************
+1116              ; Read FLASH Device ID
+1117              ;**************************************************************************************
+1118              ;
+1119              ; Read the Manufacturer and Device ID from AT45DB081D memory and return it in register
+1120              ; set [s9,s8,s7]. Reading the device ID is the best way to confirm that SPI communication
+1121              ; is established and working correctly.
+1122              ;
+1123              ; This routine transmits the 'Device ID Read' command 9F hex and then reads the 3 byte
+1124              ; response which for the AT45DB081D should be as follows...
+1125              ;   1st byte returned in register s9 = Manufacturer ID  = 1F hex
+1126              ;   2nd byte returned in register s8 = Device ID part 1 = 25 hex
+1127              ;   3rd byte returned in register s7 = Device ID part 2 = 00 hex
+1128              ;
+1129              read_FLASH_ID: 
+1130  257  30241  	CALL SPI_flash_enable                  ;enable FLASH memory
+1131  258  0039f  	LOAD s3, 9F	    ;Read ID command
+1132  259  30246  	CALL SPI_tx_rx	 ;transmit command
+1133  25a  30246  	CALL SPI_tx_rx	 ;receive Manufacturer ID
+1134  25b  01930  	LOAD s9, s3	    ;display value
+1135  25c  30246  	CALL SPI_tx_rx	 ;Device ID part 1
+1136  25d  01830  	LOAD s8, s3	    ;display value
+1137  25e  30246  	CALL SPI_tx_rx	 ;Device ID part 2
+1138  25f  01730  	LOAD s7, s3	    ;display value
+1139  260  3023d  	CALL SPI_init	  ;FLASH disabled
+1140  261  2a000  	RETURN
+1141              
+1142              
+1143              
+1144              ;**************************************************************************************
+1145              ; Read status register from AT45DB081D memory
+1146              ;**************************************************************************************
+1147              ;
+1148              ; Transmits command D7 hex and then receives one byte in response
+1149              ; which is returned in register 's3'.
+1150              ;
+1151              ;  bit    meaning
+1152              ;   7    RDY/BUSY    ( '1' = ready / '0' = busy )
+1153              ;   6    COMP
+1154              ;   5    '1'
+1155              ;   4    '0'
+1156              ;   3    '0'
+1157              ;   2    '1'
+1158              ;   1    PROTECT
+1159              ;   0    PAGE SIZE   ( '0' = 264 bytes / '1' = 256 bytes ) Default is Low
+1160              ;
+1161              ;
+1162              ; Registers used s0,s1,s2,s3
+1163              ;
+1164              read_spi_flash_status: 
+1165  262  30241  	CALL SPI_flash_enable                  ;enable FLASH memory
+1166  263  003d7  	LOAD s3, D7	    ;Read Status register command
+1167  264  30246  	CALL SPI_tx_rx	 ;transmit command
+1168  265  30246  	CALL SPI_tx_rx	 ;Receive status register information
+1169  266  3023d  	CALL SPI_init	  ;FLASH disabled
+1170  267  2e301  	STORE s3, AT45DB081D_page_mode         ;refresh page size value in scratch pad
+1171  268  2a000  	RETURN
+1172              	;
+1173              
+1174              
+1175              ;**************************************************************************************
+1176              ; Routine to transmit the 24-bit address value contained in register set [s9,s8,s7]
+1177              ; to the FLASH via the SPI port.
+1178              ;**************************************************************************************
+1179              
+1180              spi_tx_address: 
+1181  269  01390  	LOAD s3, s9	    ;address[23:16]
+1182  26a  30246  	CALL SPI_tx_rx	 ;transmit address
+1183  26b  01380  	LOAD s3, s8	    ;address[15:8]
+1184  26c  30246  	CALL SPI_tx_rx	 ;transmit address
+1185  26d  01370  	LOAD s3, s7	    ;address[7:0]
+1186  26e  30246  	CALL SPI_tx_rx	 ;transmit address
+1187  26f  2a000  	RETURN
+1188              
+1189              ;**************************************************************************************
+1190              ; Read Device DNA into scratch pad memory
+1191              ;**************************************************************************************
+1192              ;
+1193              ; Note that DNA has a specified minimum lifetime of 10 years or 30,000,000 read cycles.
+1194              ; Reading at 16 second intervals equates to over 15 years continuous operation. Since it
+1195              ; is clearly easier to read the device DNA faster every 16 seconds then designers should
+1196              ; ensure a suitable time delay exists between regular read operations.
+1197              ;
+1198              ; Initialisation ensures that all control signals are Low.
+1199              ;
+1200              DNA_init: 
+1201  270  00000  	LOAD s0, 00	    ;clear all control signals
+1202  271  2c010  	OUTPUT s0, DNA_control_port
+1203  272  2a000  	RETURN
+1204              
+1205              ; To read the DNA the following sequence is required...
+1206              ;
+1207              ;   READ = 1
+1208              ;   clock pulse (High then Low).  This transfers the DNA value into the shift register
+1209              ;	         Bit 57 will be presented on DOUT (should be '1')
+1210              ;
+1211              ;   SHIFT = 1
+1212              ;   read the DOUT value.   Bits are read MSB first starting with fixed bits "10"
+1213              ;   clock pulse (High then Low). Advances shift register to the next bit
+1214              ;
+1215              ; After 57 repetitions with SHIFT=1 complete DNA value will be acquired.
+1216              ; The values of DIN applied during each clock cycle with SHIFT=1 will be shifted into the DNA
+1217              ; shift register and would the appear at DOUT if the shift operations continue without a new
+1218              ; read cycle.
+1219              ;
+1220              ; Registers used: s0,s1,s2,s3,s4,s5,s6,s7,s8,s9,sA
+1221              ;
+1222              
+1223              read_device_DNA: 
+1224  273  00004  	LOAD s0, DNA_read                      ;Transfer DNA into shift register
+1225  274  2c010  	OUTPUT s0, DNA_control_port
+1226  275  30289  	CALL DNA_clk_pulse
+1227  276  00002  	LOAD s0, DNA_shift                     ;prepare to shift value
+1228  277  2c010  	OUTPUT s0, DNA_control_port
+1229  278  00300  	LOAD s3, 00	    ;clear bits of result register that will not be overwritten by shifting
+1230  279  00239  	LOAD s2, 39	    ;57-bits to read DNA value only
+1231              read_DNA_loop: 
+1232  27a  04106  	INPUT s1, DNA_read_port                ;read data bit
+1233  27b  12101  	TEST s1, DNA_dout                      ;isolate data bit (put into carry flag)
+1234  27c  20300  	SLA s3	         ;shift data bit into lsb of register set [sA,s9,s8,s7,s6,s5,s4,s3] <- carry
+1235  27d  20400  	SLA s4
+1236  27e  20500  	SLA s5
+1237  27f  20600  	SLA s6
+1238  280  20700  	SLA s7
+1239  281  20800  	SLA s8
+1240  282  20900  	SLA s9
+1241  283  20a00  	SLA sA
+1242  284  30289  	CALL DNA_clk_pulse                     ;advance DNA shift register ready to read next DNA bit
+1243  285  1c201  	SUB s2, 01	     ;count bits read
+1244  286  35288  	JUMP Z, store_DNA
+1245  287  3427a  	JUMP read_DNA_loop
+1246              store_DNA: 
+1247              ;	STORE s3, DNA_byte0
+1248              ;	STORE s4, DNA_byte1
+1249              ;	STORE s5, DNA_byte2
+1250              ;	STORE s6, DNA_byte3
+1251              ;	STORE s7, DNA_byte4
+1252              ;	STORE s8, DNA_byte5
+1253              ;	STORE s9, DNA_byte6
+1254              ;	STORE sA, DNA_byte7
+1255  288  34270  	JUMP DNA_init
+1256              
+1257              
+1258              ;
+1259              ;Generate clock pulse to DNA port
+1260              ;
+1261              DNA_clk_pulse: 
+1262  289  0e001  	XOR s0, DNA_clk	;CLK=1
+1263  28a  2c010  	OUTPUT s0, DNA_control_port
+1264  28b  0e001  	XOR s0, DNA_clk	;CLK=0
+1265  28c  2c010  	OUTPUT s0, DNA_control_port
+1266  28d  2a000  	RETURN
+1267              
+1268              
+1269              
+1270              
+1271              ;*****************************************************************************-
+1272              ; Utility functions
+1273              ;*****************************************************************************-
+1274              
+1275              ; Convert byte to hex value in Galaksija format
+1276              ; s0 - byte to convert
+1277              ; Output:
+1278              ; s0 - upper nibble
+1279              ; s1 - lower nibble
+1280              ; Galaksija character ROM:
+1281              ; letters - A = 1, B = 2, ...
+1282              ; numbers - 0 = 0x21, 1 = 0x22
+1283              
+1284              Byte2Hex:
+1285  28e  30213  	CALL	push_s2
+1286              
+1287  28f  01100  	LOAD	s1, s0
+1288  290  2010e  	SR0	s1
+1289  291  2010e  	SR0	s1
+1290  292  2010e  	SR0	s1
+1291  293  2010e  	SR0	s1
+1292  294  01200  	LOAD	s2, s0
+1293  295  0a20f  	AND	s2, 0F
+1294  296  01020  	LOAD	s0, s2
+1295  297  3029e  	CALL	Nibble2ASCII
+1296  298  01200  	LOAD	s2, s0
+1297  299  01010  	LOAD	s0, s1
+1298  29a  3029e  	CALL	Nibble2ASCII
+1299  29b  01120  	LOAD	s1, s2
+1300              
+1301  29c  30216  	CALL	pop_s2
+1302  29d  2a000  	RETURN
+1303              ;*****************************************************************************-
+1304              
+1305              ; Convert nibble value to ASCII
+1306              ; Input: s0 - nibble to convert
+1307              ; Output: s0 - ASCII representation
+1308              
+1309              Nibble2ASCII:	
+1310  29e  1400a  	COMPARE	s0, 0A
+1311  29f  35aa2  	JUMP	C, Nibble2ASCII_number
+1312              	; Nibble to convert is a letter
+1313  2a0  1c009  	SUB	s0, 9
+1314  2a1  2a000  	RETURN
+1315              Nibble2ASCII_number:
+1316              	; Nibble to convert is a number	
+1317              ;	ADD	s0, 21
+1318  2a2  18030  	ADD	s0, 30
+1319  2a3  2a000  	RETURN
+1320              ;*****************************************************************************-
+1321              ; Convert ASCII values to character generator ROM
+1322              ; Input: s0 - ASCII value to convert
+1323              ; Output: s0 - Converted value
+1324              ;*****************************************************************************-
+1325              
+1326              ASCII2CHROM:
+1327              ;	COMPARE	s0, 41
+1328              ;	JUMP	NC, ASCII2CHROM_letter
+1329              	; Character to convert is a number or other character
+1330              
+1331              	; Assume it is a number
+1332              	;SUB	s0, 0F
+1333              ;	RETURN
+1334              
+1335              ASCII2CHROM_letter:
+1336              	; Character to convert is a letter
+1337  2a4  0a0bf  	AND	s0, BF	; clear bit 6
+1338  2a5  2a000  	RETURN
+1339              
+1340              ;*****************************************************************************-
+1341              ; Read byte from RAM
+1342              ; Input: sD:sE - address
+1343              ; Output: s3 - RAM value
+1344              ;*****************************************************************************-
+1345              ReadRAM:
+1346              	; Write RAM address
+1347  2a6  010d0  	LOAD	s0, sD
+1348  2a7  2c083  	OUTPUT	s0, RAM_ADDR_H_port
+1349  2a8  010e0  	LOAD	s0, sE
+1350  2a9  2c082  	OUTPUT	s0, RAM_ADDR_L_port
+1351              		
+1352              	; Pulse RAM clock
+1353  2aa  00000  	LOAD	s0, 0
+1354  2ab  2c080  	OUTPUT	s0, RAM_WR_CK_port
+1355  2ac  00001  	LOAD	s0, RAM_CK
+1356  2ad  2c080  	OUTPUT	s0, RAM_WR_CK_port
+1357  2ae  00000  	LOAD	s0, 0
+1358  2af  2c080  	OUTPUT	s0, RAM_WR_CK_port
+1359              
+1360              	; Read RAM data
+1361  2b0  04303  	INPUT	s3, RAM_DIN_port
+1362              
+1363  2b1  2a000  	RETURN
+1364              
+1365              ;*****************************************************************************-
+1366              ; Write byte to RAM
+1367              ; Input: s3 - byte to write, sD:sE - address
+1368              ;*****************************************************************************-
+1369              WriteRAM:
+1370              	; Write RAM data
+1371  2b2  2c381  	OUTPUT	s3, RAM_DOUT_port
+1372              
+1373              	; Write RAM address
+1374  2b3  010d0  	LOAD	s0, sD
+1375  2b4  2c083  	OUTPUT	s0, RAM_ADDR_H_port
+1376  2b5  010e0  	LOAD	s0, sE
+1377  2b6  2c082  	OUTPUT	s0, RAM_ADDR_L_port
+1378              		
+1379              	; Pulse RAM clock with WR
+1380  2b7  00002  	LOAD	s0, RAM_WR
+1381  2b8  2c080  	OUTPUT	s0, RAM_WR_CK_port
+1382  2b9  00003  	LOAD	s0, RAM_WRCK
+1383  2ba  2c080  	OUTPUT	s0, RAM_WR_CK_port
+1384  2bb  00000  	LOAD	s0, 0
+1385  2bc  2c080  	OUTPUT	s0, RAM_WR_CK_port
+1386              
+1387  2bd  2a000  	RETURN
+1388              
+1389              ;*****************************************************************************-
+1390              ; Read 256 bytes from RAM and send it to FLASH buffer
+1391              ; Input:
+1392              ;		sD:sE - starting RAM addres, RAM address is UPDATED!		
+1393              ;*****************************************************************************-
+1394              RAM2FLASH:
+1395  2be  3021f  	CALL	push_s4
+1396  2bf  00400  	LOAD	s4, 0
+1397              
+1398              RAM2FLASH_1:
+1399  2c0  302a6  	CALL	ReadRAM		; read byte from RAM to s3
+1400  2c1  30246  	CALL	SPI_tx_rx	; write byte to FLASH buffer
+1401              
+1402  2c2  18e01  	ADD	sE, 01
+1403  2c3  1ad00  	ADDCY	sD, 00		; update RAM address
+1404              
+1405  2c4  18401  	ADD	s4, 1
+1406  2c5  356c0  	JUMP	NZ, RAM2FLASH_1
+1407              
+1408  2c6  30222  	CALL	pop_s4
+1409  2c7  2a000  	RETURN
+1410              	
+1411              ;*****************************************************************************-
+1412              ; Read 256 bytes from FLASH and write them to RAM
+1413              ; Input:
+1414              ;		sD:sE - starting RAM addres, RAM address is UPDATED!		
+1415              ;*****************************************************************************-
+1416              FLASH2RAM:
+1417  2c8  3021f  	CALL	push_s4
+1418  2c9  00400  	LOAD	s4, 0
+1419              
+1420              FLASH2RAM_1:
+1421  2ca  30246  	CALL	SPI_tx_rx	; read byte from FLASH buffer
+1422  2cb  302b2  	CALL	WriteRAM	; write byte from s3 to RAM
+1423              
+1424  2cc  18e01  	ADD	sE, 01
+1425  2cd  1ad00  	ADDCY	sD, 00		; update RAM address
+1426              
+1427  2ce  18401  	ADD	s4, 1
+1428  2cf  356ca  	JUMP	NZ, FLASH2RAM_1
+1429  2d0  30222  	CALL	pop_s4
+1430  2d1  2a000  	RETURN
+1431              	
+1432              ;*****************************************************************************-
+1433              ; FLASH info
+1434              ; Only upper part of FLASH is used - pages 1024 to 2047
+1435              ; Galaksija memory dump is 8 KB - it takes 32 pages
+1436              ; Space for 32 dumps is available
+1437              ;*****************************************************************************-
+1438              ; FLASH address formation:
+1439              ; FLASH address is formed based on a FLASH_IMAGE_NUMBER and FLASH_PAGE_NUMBER
+1440              ; FLASH_IMAGE_NUMBER < 32
+1441              ; FLASH_PAGE_NUMBER < 32
+1442              ;
+1443              ; PhyPage = 1024 + FLASH_IMAGE_NUMBER * 32 + FLASH_PAGE_NUMBER
+1444              ;*****************************************************************************-
+1445              
+1446              ; Make physical FLASH address based on FLASH_IMAGE_NUMBER, FLASH_PAGE_NUMBER and FLASH_EXT_ADDR
+1447              ; Store result in s9:s8:s7 for direct interface with spi_tx_address function
+1448              MakeFLASHAddr:
+1449  2d2  00700  	LOAD	s7, 0		; lowest address is always 0 for page access
+1450  2d3  06808  	FETCH	s8, FLASH_IMAGE_NUMBER
+1451  2d4  00900  	LOAD	s9, 0
+1452              
+1453  2d5  302e2  	CALL	ShiftLefts9s8	; *2
+1454  2d6  302e2  	CALL	ShiftLefts9s8	; *4
+1455  2d7  302e2  	CALL	ShiftLefts9s8	; *8
+1456  2d8  302e2  	CALL	ShiftLefts9s8	; *16
+1457  2d9  302e2  	CALL	ShiftLefts9s8	; *32
+1458              
+1459  2da  06009  	FETCH	s0, FLASH_PAGE_NUMBER
+1460  2db  19800  	ADD	s8, s0
+1461              
+1462  2dc  302e2  	CALL	ShiftLefts9s8	; make room for extended addr bit
+1463  2dd  0600a  	FETCH	s0, FLASH_EXT_ADDR
+1464  2de  0a001  	AND	s0, 1
+1465  2df  19800  	ADD	s8, s0
+1466              
+1467  2e0  0c908  	OR	s9, 08		; MSB of FLASH address must be 1 (pages > 1024)
+1468  2e1  2a000  	RETURN
+1469              
+1470              ;*****************************************************************************-
+1471              ShiftLefts9s8:
+1472  2e2  20806  	SL0	s8
+1473  2e3  20900  	SLA	s9
+1474  2e4  2a000  	RETURN
+1475              
+1476              ;*****************************************************************************-
+1477              ; Write RAM image to FLASH
+1478              ; Inputs: 
+1479              ;		FLASH_IMAGE_NUMBER should be set to correct value
+1480              ;		FLASH_IMAGE_NAME0 to FLASH_IMAGE_NAME7 should be set to correct value
+1481              ;*****************************************************************************-
+1482              WriteRAMImage:
+1483  2e5  00000  	LOAD	s0, 0
+1484  2e6  2e009  	STORE	s0, FLASH_PAGE_NUMBER
+1485  2e7  00d00  	LOAD	sD, 0
+1486  2e8  00e00  	LOAD	sE, 0		; set starting RAM address to 0
+1487              
+1488  2e9  30303  	CALL	WriteRAMImageName	; Write RAM image name to buffer
+1489              
+1490  2ea  00000  	LOAD	s0, 0
+1491  2eb  2e00a  	STORE	s0, FLASH_EXT_ADDR	; no extended adressing
+1492              	
+1493              WriteRAMImage_loop:
+1494  2ec  30241  	CALL	SPI_flash_enable	; Enable FLASH
+1495  2ed  00384  	LOAD	s3, 84			; Buffer Write command = 84 hex
+1496  2ee  30246  	CALL	SPI_tx_rx		; Send command
+1497              
+1498  2ef  302d2  	CALL	MakeFLASHAddr		; Make FLASH address
+1499  2f0  30269  	CALL	spi_tx_address		; Send address to FLASH
+1500              
+1501  2f1  302be  	CALL	RAM2FLASH		; transmit 256 bytes from RAM to FLASH
+1502              
+1503  2f2  3023d  	CALL	SPI_init		; disable FLASH
+1504              
+1505  2f3  30241  	CALL	SPI_flash_enable	; enable FLASH
+1506  2f4  00383  	LOAD	s3, 83			; write buffer to FLASH command
+1507  2f5  30246  	CALL	SPI_tx_rx		; transmit command
+1508  2f6  30269  	CALL	spi_tx_address		; transmit 24-bit address in register set [s9,s8,s7]
+1509  2f7  3023d  	CALL	SPI_init		; FLASH disabled
+1510              	
+1511              	; Check FLASH status
+1512              WriteRAMImage_wait:
+1513  2f8  30262  	CALL	read_spi_flash_status	; read FLASH status register
+1514  2f9  12380  	TEST	s3, 80
+1515  2fa  35ef8  	JUMP	NC ,WriteRAMImage_wait	; status bit = 0 (FLASH busy)
+1516              
+1517              	; FLASH page writing is complete, go to next page
+1518  2fb  06009  	FETCH	s0, FLASH_PAGE_NUMBER
+1519  2fc  18001  	ADD	s0, 01
+1520  2fd  2e009  	STORE	s0, FLASH_PAGE_NUMBER
+1521  2fe  14020  	COMPARE	s0, 20
+1522  2ff  356ec  	JUMP	NZ, WriteRAMImage_loop
+1523              	
+1524  300  00000  	LOAD	s0, 0
+1525  301  2e009  	STORE	s0, FLASH_PAGE_NUMBER
+1526  302  2a000  	RETURN
+1527              
+1528              ;*****************************************************************************-
+1529              ;
+1530              ;*****************************************************************************-
+1531              
+1532              WriteRAMImageName:
+1533  303  00000  	LOAD	s0, 0
+1534  304  2e009  	STORE	s0, FLASH_PAGE_NUMBER
+1535              
+1536  305  00001  	LOAD	s0, 1
+1537  306  2e00a  	STORE	s0, FLASH_EXT_ADDR	; extended adressing
+1538              
+1539  307  30241  	CALL	SPI_flash_enable	; Enable FLASH
+1540  308  00384  	LOAD	s3, 84			; Buffer Write command = 84 hex
+1541  309  30246  	CALL	SPI_tx_rx		; Send command
+1542              
+1543  30a  302d2  	CALL	MakeFLASHAddr		; Make FLASH address
+1544  30b  30269  	CALL	spi_tx_address		; Send address to FLASH
+1545              
+1546  30c  06310  	FETCH	s3, FLASH_IMAGE_NAME0
+1547  30d  30246  	CALL	SPI_tx_rx
+1548              	
+1549  30e  06311  	FETCH	s3, FLASH_IMAGE_NAME1
+1550  30f  30246  	CALL	SPI_tx_rx
+1551              
+1552  310  06312  	FETCH	s3, FLASH_IMAGE_NAME2
+1553  311  30246  	CALL	SPI_tx_rx
+1554              
+1555  312  06313  	FETCH	s3, FLASH_IMAGE_NAME3
+1556  313  30246  	CALL	SPI_tx_rx
+1557              
+1558  314  06314  	FETCH	s3, FLASH_IMAGE_NAME4
+1559  315  30246  	CALL	SPI_tx_rx
+1560              
+1561  316  06315  	FETCH	s3, FLASH_IMAGE_NAME5
+1562  317  30246  	CALL	SPI_tx_rx
+1563              
+1564  318  06316  	FETCH	s3, FLASH_IMAGE_NAME6
+1565  319  30246  	CALL	SPI_tx_rx
+1566              
+1567  31a  06317  	FETCH	s3, FLASH_IMAGE_NAME7
+1568  31b  30246  	CALL	SPI_tx_rx
+1569              
+1570  31c  3023d  	CALL	SPI_init		; FLASH disabled
+1571              
+1572  31d  00000  	LOAD	s0, 0
+1573  31e  2e00a  	STORE	s0, FLASH_EXT_ADDR	; no extended adressing
+1574  31f  2a000  	RETURN
+1575              	
+1576              ;*****************************************************************************-
+1577              ; Reads RAM image name to FLASH_IMAGE_NAME0 to FLASH_IMAGE_NAME7
+1578              ;*****************************************************************************-
+1579              ReadRAMImageName:
+1580  320  00000  	LOAD	s0, 0
+1581  321  2e009  	STORE	s0, FLASH_PAGE_NUMBER
+1582              
+1583  322  00001  	LOAD	s0, 1
+1584  323  2e00a  	STORE	s0, FLASH_EXT_ADDR	; extended adressing
+1585              
+1586  324  30241  	CALL	SPI_flash_enable	; Enable FLASH
+1587  325  003d2  	LOAD	s3, D2			; Read FLASH memory command = 0xD2
+1588  326  30246  	CALL	SPI_tx_rx		; Send command
+1589              
+1590  327  302d2  	CALL	MakeFLASHAddr		; Make FLASH address
+1591  328  30269  	CALL	spi_tx_address		; Send address to FLASH
+1592              
+1593  329  30246  	CALL	SPI_tx_rx
+1594  32a  30246  	CALL	SPI_tx_rx
+1595  32b  30246  	CALL	SPI_tx_rx
+1596  32c  30246  	CALL	SPI_tx_rx		; 4 dummy bytes required by FLASH specs
+1597              
+1598  32d  30246  	CALL	SPI_tx_rx
+1599  32e  2e310  	STORE	s3, FLASH_IMAGE_NAME0
+1600              	
+1601  32f  30246  	CALL	SPI_tx_rx
+1602  330  2e311  	STORE	s3, FLASH_IMAGE_NAME1
+1603              
+1604  331  30246  	CALL	SPI_tx_rx
+1605  332  2e312  	STORE	s3, FLASH_IMAGE_NAME2
+1606              
+1607  333  30246  	CALL	SPI_tx_rx
+1608  334  2e313  	STORE	s3, FLASH_IMAGE_NAME3
+1609              
+1610  335  30246  	CALL	SPI_tx_rx
+1611  336  2e314  	STORE	s3, FLASH_IMAGE_NAME4
+1612              
+1613  337  30246  	CALL	SPI_tx_rx
+1614  338  2e315  	STORE	s3, FLASH_IMAGE_NAME5
+1615              
+1616  339  30246  	CALL	SPI_tx_rx
+1617  33a  2e316  	STORE	s3, FLASH_IMAGE_NAME6
+1618              
+1619  33b  30246  	CALL	SPI_tx_rx
+1620  33c  2e317  	STORE	s3, FLASH_IMAGE_NAME7
+1621              
+1622  33d  3023d  	CALL	SPI_init		; FLASH disabled
+1623              
+1624  33e  00000  	LOAD	s0, 0
+1625  33f  2e00a  	STORE	s0, FLASH_EXT_ADDR	; extended adressing
+1626  340  2a000  	RETURN
+1627              
+1628              
+1629              ;*****************************************************************************-
+1630              ; Read RAM image from FLASH
+1631              ; Inputs: 
+1632              ;		FLASH_IMAGE_NUMBER should be set to correct value
+1633              ;*****************************************************************************-
+1634              ReadRAMImage:
+1635  341  00000  	LOAD	s0, 0
+1636  342  2e009  	STORE	s0, FLASH_PAGE_NUMBER
+1637  343  00d00  	LOAD	sD, 0
+1638  344  00e00  	LOAD	sE, 0		; set starting RAM address to 0
+1639              
+1640  345  00000  	LOAD	s0, 0
+1641  346  2e00a  	STORE	s0, FLASH_EXT_ADDR	; no extended adressing
+1642              	
+1643              ReadRAMImage_loop:
+1644  347  30241  	CALL	SPI_flash_enable	; Enable FLASH
+1645  348  003d2  	LOAD	s3, D2			; Buffer Write command = 84 hex
+1646  349  30246  	CALL	SPI_tx_rx		; Send command
+1647              
+1648  34a  302d2  	CALL	MakeFLASHAddr		; Make FLASH address
+1649  34b  30269  	CALL	spi_tx_address		; Send address to FLASH
+1650              
+1651  34c  30246  	CALL	SPI_tx_rx		; Dummy
+1652  34d  30246  	CALL	SPI_tx_rx		; Dummy
+1653  34e  30246  	CALL	SPI_tx_rx		; Dummy
+1654  34f  30246  	CALL	SPI_tx_rx		; Dummy
+1655              
+1656  350  302c8  	CALL	FLASH2RAM		; transfer 256 bytes from FLASH to RAM
+1657              
+1658  351  3023d  	CALL	SPI_init		; disable FLASH
+1659              
+1660              	; FLASH page reading is complete, go to next page
+1661  352  06009  	FETCH	s0, FLASH_PAGE_NUMBER
+1662  353  18001  	ADD	s0, 01
+1663  354  2e009  	STORE	s0, FLASH_PAGE_NUMBER
+1664  355  14020  	COMPARE	s0, 20
+1665  356  35747  	JUMP	NZ, ReadRAMImage_loop
+1666              	
+1667  357  00000  	LOAD	s0, 0
+1668  358  2e009  	STORE	s0, FLASH_PAGE_NUMBER
+1669  359  2a000  	RETURN
+1670              
+1671              ;*****************************************************************************-
+1672              ; Interrupt handler
+1673              ;*****************************************************************************-
+1674              
+1675              interrupt_handler:
+1676  35a  38001  	RETURNI ENABLE	; return from interrupt, enable interrupts
+1677              
+1678              ADDRESS 3FF
+1679              	JUMP	interrupt_handler
+1680              

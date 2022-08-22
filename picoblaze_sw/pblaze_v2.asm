@@ -1,0 +1,1680 @@
+; *****************************************************************************
+; *****************************************************************************
+; *****************************************************************************
+	; Constants
+
+	; Port locations for reading
+
+	CONSTANT	KEY_CODE, 0		; key code. special fn bit is at bit 7
+	CONSTANT	KEY_STICKY, 1		; KEY_STICKY bit is at bit 0
+	CONSTANT	ESC_STATE, 2		; esc_state is at bit 0
+
+	CONSTANT	SPI_in_port, 05		; Read serial data from FLASH device
+	CONSTANT	DNA_read_port, 06	; Output data from the DNA primitive
+	CONSTANT	CH_DATA, 7		; data read from character generator
+
+	CONSTANT	RAM_DIN_port, 3		; data read from RAM
+
+	; Bit locations for reading
+	CONSTANT	SPI_miso, 01		; Master In Slave Out - bit0
+	CONSTANT	DNA_dout, 01		; DOUT - bit0
+
+	; Port locations for writing
+	CONSTANT	VIDEO_ADDR_L,0
+	CONSTANT	VIDEO_ADDR_H,1
+	CONSTANT	VIDEO_DATA,2
+	CONSTANT	VIDEO_WR, 3
+	CONSTANT	LINE_OUT, 4
+	CONSTANT	CH_ADDR_L, 5
+	CONSTANT	CH_ADDR_H, 6
+	CONSTANT	KEY_READ, 7		; KEY_READ bit is at bit 0
+	CONSTANT	SPI_out_port, 08	; Data to write into FLASH device
+	CONSTANT	DNA_control_port, 10	; Input data and control to the DNA primitive
+	CONSTANT	CPU_SEL_port, 20	; CPU frequency selector port
+
+	CONSTANT	RAM_WR_CK_port, 80	; RAM WR and CK
+	CONSTANT	RAM_DOUT_port, 81	; Data to be sent to RAM
+	CONSTANT	RAM_ADDR_L_port, 82	; RAM address, low byte
+	CONSTANT	RAM_ADDR_H_port, 83	; RAM address, high byte
+
+	; Bit locations for writing
+	CONSTANT	SPI_sck, 01		; Clock - bit0
+	CONSTANT	SPI_rom_cs, 02		; FLASH chip select (active Low) - bit1
+	CONSTANT	SPI_mosi, 80		; Master Out Slave In - bit7
+
+	CONSTANT	DNA_clk, 01		; CLK - bit0
+	CONSTANT	DNA_shift, 02		; SHIFT - bit1
+	CONSTANT	DNA_read, 04		; READ - bit2
+	CONSTANT	DNA_din, 08		; DIN - bit3
+
+	CONSTANT	RAM_CK, 1		; RAM_CK - bit0
+	CONSTANT	RAM_WR, 2		; RAM_WR - bit1
+	CONSTANT	RAM_WRCK, 3
+
+; *****************************************************************************
+; ASCII constants
+; *****************************************************************************
+
+	CONSTANT character_A, 41
+	CONSTANT character_B, 42
+	CONSTANT character_C, 43
+	CONSTANT character_D, 44
+	CONSTANT character_E, 45
+	CONSTANT character_F, 46
+	CONSTANT character_G, 47
+	CONSTANT character_H, 48
+	CONSTANT character_I, 49
+	CONSTANT character_J, 4A
+	CONSTANT character_K, 4B
+	CONSTANT character_L, 4C
+	CONSTANT character_M, 4D
+	CONSTANT character_N, 4E
+	CONSTANT character_O, 4F
+	CONSTANT character_P, 50
+	CONSTANT character_Q, 51
+	CONSTANT character_R, 52
+	CONSTANT character_S, 53
+	CONSTANT character_T, 54
+	CONSTANT character_U, 55
+	CONSTANT character_V, 56
+	CONSTANT character_W, 57
+	CONSTANT character_X, 58
+	CONSTANT character_Y, 59
+	CONSTANT character_Z, 5A
+	CONSTANT character_0, 30
+	CONSTANT character_1, 31
+	CONSTANT character_2, 32
+	CONSTANT character_3, 33
+	CONSTANT character_4, 34
+	CONSTANT character_5, 35
+	CONSTANT character_6, 36
+	CONSTANT character_7, 37
+	CONSTANT character_8, 38
+	CONSTANT character_9, 39
+
+; *****************************************************************************
+; *****************************************************************************
+; *****************************************************************************
+
+	NAMEREG		sF, stack_pointer
+
+; *****************************************************************************
+; *****************************************************************************
+; *****************************************************************************
+
+; Scratch-pad RAM locations
+	CONSTANT SPI_bus_status, 00
+	CONSTANT AT45DB081D_page_mode, 01      ;LSB indicates size of pages '0'=264 Bytes '1'=256 bytes.
+
+	; X and Y positions for graphic subs
+	CONSTANT XPOS, 02
+	CONSTANT YPOS, 03
+
+	CONSTANT PRINT_TYPE, 04			; 0 - normal print, 1 - inverted
+
+	CONSTANT SEL_MENU_ITEM, 05		; selected menu item
+	CONSTANT CURR_MENU, 06			; Current menu
+
+	CONSTANT CPU_FREQ_SEL, 07		; selected CPU freq
+
+	CONSTANT FLASH_IMAGE_NUMBER, 08		; Galaksija RAM image number <32
+	CONSTANT FLASH_PAGE_NUMBER, 09		; Page number in RAM image <32
+	CONSTANT FLASH_EXT_ADDR, 0A		; Extended addresses (bytes 256 - 263 of FLASH page - used for image name)
+						; Only 0 and 1 are allowed
+	CONSTANT FLASH_IMAGE_NAME0, 10
+	CONSTANT FLASH_IMAGE_NAME1, 11
+	CONSTANT FLASH_IMAGE_NAME2, 12
+	CONSTANT FLASH_IMAGE_NAME3, 13
+	CONSTANT FLASH_IMAGE_NAME4, 14
+	CONSTANT FLASH_IMAGE_NAME5, 15
+	CONSTANT FLASH_IMAGE_NAME6, 16
+	CONSTANT FLASH_IMAGE_NAME7, 17
+
+	CONSTANT CURRENT_LETTER, 18
+
+
+; Current menu numbering
+; 0 - Main menu
+; 1 - Load mem menu
+; 2 - Save mem menu
+; 3 - CPU freq menu
+
+
+; Scratch-par RAM from 20h to end is reserved for stack
+
+; *****************************************************************************
+; *****************************************************************************
+; *****************************************************************************
+
+ADDRESS 0
+
+Start:
+	LOAD	stack_pointer, 20			; init stack pointer
+	DISABLE INTERRUPT		; disable interrupts
+
+	CALL	SPI_init		; init SPI FLASH
+	CALL	DNA_init		; init device DNA
+
+	CALL	read_spi_flash_status
+
+	; Init output lines
+	LOAD	s0, 0
+	OUTPUT	s0, VIDEO_WR
+	OUTPUT	s0, KEY_READ
+
+	OUTPUT	s0, RAM_WR_CK_port
+	OUTPUT	s0, RAM_DOUT_port
+	OUTPUT	s0, RAM_ADDR_L_port
+	OUTPUT	s0, RAM_ADDR_H_port
+
+;	STORE	s0, CPU_FREQ_SEL
+;	OUTPUT	s0, CPU_SEL_port
+
+;	STORE	s0, FLASH_IMAGE_NUMBER
+	STORE	s0, FLASH_PAGE_NUMBER
+	STORE	s0, FLASH_EXT_ADDR
+
+	LOAD	s0, 1
+	OUTPUT	s0, KEY_READ
+	OUTPUT	s0, LINE_OUT
+
+	LOAD	s0, 0
+	OUTPUT	s0, KEY_READ
+
+	;ENABLE INTERRUPT		; enable interrupts
+
+main_loop0:
+	; Wait for key press
+	INPUT	s0, ESC_STATE
+	TEST	s0, 1
+	JUMP	NC, main_loop0		; don't do anything if ESC_STATE = 0
+
+	; ESC state = 1
+	LOAD	s0, 0
+	CALL	EraseScreen
+
+	LOAD	s0, 0
+	STORE	s0, PRINT_TYPE
+	STORE	s0, SEL_MENU_ITEM
+	STORE	s0, CURR_MENU
+	LOAD	sD, 0
+	LOAD	sE, 0
+
+	; Print information about FLASH ID and Device DNA
+	CALL	Print_FLASH_ID
+	CALL	Print_Device_DNA
+
+	; Print menu
+	CALL	Print_MainMenu
+
+main_menu_loop_wait_key:
+	CALL	GetKey
+	COMPARE	s0, FF
+	JUMP	Z, main_menu_loop_wait_key	; the key is not pressed
+	COMPARE	s0, 76
+	JUMP	Z, main_loop0		; ESC key pressed
+
+	FETCH	s1, SEL_MENU_ITEM
+
+	COMPARE	s0, F2
+	JUMP	NZ, main_menu_loop1	; down arrow
+	ADD	s1, 1
+	COMPARE	s1, 3
+	JUMP	C, main_menu_loop1
+	LOAD	s1, 0
+main_menu_loop1:
+	COMPARE	s0, F5			; up arrow
+	JUMP	NZ, main_menu_loop2
+	SUB	s1, 1
+	COMPARE	s1, FF
+	JUMP	NZ, main_menu_loop2
+	LOAD	s1, 2
+	
+main_menu_loop2:
+	STORE	s1, SEL_MENU_ITEM	; store the menu selection
+
+	COMPARE	s0, 5A			; enter key
+	JUMP	NZ, main_menu_loop3
+	; Enter key pressed
+	COMPARE	s1, 0
+	JUMP	Z, load_mem_menu
+	COMPARE	s1, 1
+	JUMP	Z, save_mem_menu
+	COMPARE	s1, 2
+	JUMP	Z, cpu_freq_menu
+
+main_menu_loop3:
+	; Print menu
+	CALL	Print_MainMenu
+
+	JUMP	main_menu_loop_wait_key
+
+;*****************************************************************************-
+load_mem_menu:
+	LOAD	s0, 41
+	STORE	s0, YPOS
+	CALL	PrintImageName
+
+
+load_mem_loop_wait_key:
+	CALL	GetKey
+	COMPARE	s0, FF
+	JUMP	Z, load_mem_loop_wait_key	; the key is not pressed
+	COMPARE	s0, 76
+	JUMP	Z, main_loop0		; ESC key pressed
+
+	FETCH	s1, FLASH_IMAGE_NUMBER
+	COMPARE	s0, F2
+	JUMP	NZ, load_mem_loop1	; down arrow
+	ADD	s1, 1
+	COMPARE	s1, 20
+	JUMP	C, load_mem_loop1
+	LOAD	s1, 0
+load_mem_loop1:
+	COMPARE	s0, F5			; up arrow
+	JUMP	NZ, load_mem_loop2
+	SUB	s1, 1
+	COMPARE	s1, FF
+	JUMP	NZ, load_mem_loop2
+	LOAD	s1, 1F
+	
+load_mem_loop2:
+	STORE	s1, FLASH_IMAGE_NUMBER
+	CALL	push_s0
+	CALL	PrintImageName
+	CALL	pop_s0
+
+	COMPARE	s0, 5A			; enter key
+	JUMP	NZ, load_mem_loop3
+	; Enter key pressed
+
+	CALL	ReadRAMImage
+
+	JUMP	main_loop0
+
+load_mem_loop3:	
+	JUMP	load_mem_loop_wait_key
+;*****************************************************************************-
+save_mem_menu:
+	LOAD	s0, 4E
+	STORE	s0, YPOS
+	CALL	PrintImageName
+
+save_mem_loop_wait_key:
+	CALL	GetKey
+	COMPARE	s0, FF
+	JUMP	Z, save_mem_loop_wait_key	; the key is not pressed
+	COMPARE	s0, 76
+	JUMP	Z, main_loop0		; ESC key pressed
+
+	FETCH	s1, FLASH_IMAGE_NUMBER
+	COMPARE	s0, F2
+	JUMP	NZ, save_mem_loop1	; down arrow
+	ADD	s1, 1
+	COMPARE	s1, 20
+	JUMP	C, save_mem_loop1
+	LOAD	s1, 0
+save_mem_loop1:
+	COMPARE	s0, F5			; up arrow
+	JUMP	NZ, save_mem_loop2
+	SUB	s1, 1
+	COMPARE	s1, FF
+	JUMP	NZ, save_mem_loop2
+	LOAD	s1, 1F
+	
+save_mem_loop2:
+	STORE	s1, FLASH_IMAGE_NUMBER
+	CALL	push_s0
+	CALL	PrintImageName
+	CALL	pop_s0
+
+	COMPARE	s0, 5A			; enter key
+	JUMP	NZ, save_mem_loop3
+	; Enter key pressed
+
+	CALL	InputImageName		; Get the image name from keyboard
+	CALL	WriteRAMImage
+
+	JUMP	main_loop0
+
+save_mem_loop3:	
+	JUMP	save_mem_loop_wait_key
+;*****************************************************************************-
+InputImageName:
+; Get the input image name from keyboard
+; Input is done with up arrow, down arrow and enter key
+	CALL	push_s0
+	LOAD	s0, character_A
+	STORE	s0, FLASH_IMAGE_NAME0
+	STORE	s0, FLASH_IMAGE_NAME1
+	STORE	s0, FLASH_IMAGE_NAME2
+	STORE	s0, FLASH_IMAGE_NAME3
+	STORE	s0, FLASH_IMAGE_NAME4
+	STORE	s0, FLASH_IMAGE_NAME5
+	STORE	s0, FLASH_IMAGE_NAME6
+	STORE	s0, FLASH_IMAGE_NAME7
+	LOAD	s0, 0
+	STORE	s0, CURRENT_CHARACTER
+
+	CALL	InputImageName_Print
+
+InputImageName_wait_key:
+	CALL	GetKey
+	COMPARE	s0, FF
+	JUMP	Z, InputImageName_wait_key	; the key is not pressed
+	COMPARE	s0, 76
+	JUMP	Z, main_loop0		; ESC key pressed
+
+	FETCH	s1, CURRENT_CHARACTER
+	COMPARE	s0, EB
+	JUMP	NZ, InputImageName_loop1	; left arrow
+	SUB	s1, 1
+	COMPARE	s1, FF
+	JUMP	NZ, InputImageName_loop1
+	LOAD	s1, 0
+InputImageName_loop1:
+	COMPARE	s0, F4			; right arrow
+	JUMP	NZ, InputImageName_loop2
+	ADD	s1, 1
+	COMPARE	s1, 08
+	JUMP	NZ, InputImageName_loop2
+	LOAD	s1, 07
+
+InputImageName_loop2:
+	STORE	s1, CURRENT_CHARACTER
+
+	COMPARE	s0, 5A			; enter key
+	JUMP	NZ, InputImageName_loop3
+	; Enter key pressed
+	RETURN
+
+InputImageName_loop3:
+	LOAD	s1, FLASH_IMAGE_NAME0
+	FETCH	s2, CURRENT_CHARACTER
+	ADD	s2, s1
+	FETCH	s1, (s2)
+	COMPARE	s0, F2
+	JUMP	NZ, InputImageName_loop4	; down arrow
+	SUB	s1, 1
+InputImageName_loop4:
+	COMPARE	s0, F5			; up arrow
+	JUMP	NZ, InputImageName_loop5
+	ADD	s1, 1
+InputImageName_loop5:
+	STORE	s1, (s2)
+
+	CALL	InputImageName_Print
+	
+	JUMP	InputImageName_wait_key
+
+
+;*****************************************************************************-
+InputImageName_Print:
+	CALL	push_s0
+	CALL	push_s1
+	CALL	push_s2
+	LOAD	s0, 60
+	STORE	s0, XPOS
+
+	FETCH	s0, FLASH_IMAGE_NUMBER
+	CALL	PrintHex
+
+	LOAD	s0, 20
+	CALL	PrintCharacter
+
+	LOAD	s2, 0	; curr char
+
+InputImageName_Print0:
+	LOAD	s0, 0
+	STORE	s0, PRINT_TYPE
+	FETCH	s1, CURRENT_CHARACTER
+	COMPARE	s1, s2
+	JUMP	NZ, InputImageName_Print1
+	LOAD	s0, 1
+	STORE	s0, PRINT_TYPE
+InputImageName_Print1:
+	LOAD	s1, FLASH_IMAGE_NAME0
+	ADD	s1, s2
+	FETCH	s0, (s1)		
+	CALL	PrintASCII
+
+	ADD	s2, 1
+	COMPARE	s2, 8
+	JUMP	NZ, InputImageName_Print0
+
+	CALL	pop_s2
+	CALL	pop_s1
+	CALL	pop_s0
+	RETURN	
+
+
+;*****************************************************************************-
+
+cpu_freq_menu:
+	LOAD	s0, 0
+	STORE	s0, PRINT_TYPE
+	
+	LOAD	s0, 5B
+	STORE	s0, YPOS
+	LOAD	s0, C0
+	STORE	s0, XPOS
+
+	FETCH	s0, CPU_FREQ_SEL
+	CALL	PrintHex
+
+cpu_freq_loop_wait_key:
+	CALL	GetKey
+	COMPARE	s0, FF
+	JUMP	Z, cpu_freq_loop_wait_key	; the key is not pressed
+	COMPARE	s0, 76
+	JUMP	Z, main_loop0		; ESC key pressed
+
+	FETCH	s1, CPU_FREQ_SEL
+
+	COMPARE	s0, F5
+	JUMP	NZ, cpu_freq_loop1	; down arrow
+	ADD	s1, 1
+	COMPARE	s1, 4
+	JUMP	C, cpu_freq_loop1
+	LOAD	s1, 3
+cpu_freq_loop1:
+	COMPARE	s0, F2			; up arrow
+	JUMP	NZ, cpu_freq_loop2
+	SUB	s1, 1
+	COMPARE	s1, FF
+	JUMP	NZ, cpu_freq_loop2
+	LOAD	s1, 0
+	
+cpu_freq_loop2:
+	STORE	s1, CPU_FREQ_SEL
+
+	LOAD	s2, s0
+
+	LOAD	s0, 5B
+	STORE	s0, YPOS
+	LOAD	s0, C0
+	STORE	s0, XPOS
+
+	LOAD	s0, s1
+	CALL	PrintHex
+
+	COMPARE	s2, 5A			; enter key
+	JUMP	NZ, cpu_freq_loop3
+	; Enter key is pressed
+	FETCH	s0, CPU_FREQ_SEL
+	OUTPUT	s0, CPU_SEL_port
+
+	JUMP	main_loop0
+
+cpu_freq_loop3:
+	JUMP cpu_freq_loop_wait_key
+
+
+;*****************************************************************************-
+; Prints RAM image name
+;*****************************************************************************-
+; YPOS position must be set by the calling procedure!
+PrintImageName:
+	CALL	ReadRAMImageName
+
+	LOAD	s0, 60
+	STORE	s0, XPOS
+
+	FETCH	s0, FLASH_IMAGE_NUMBER
+	CALL	PrintHex
+
+	LOAD	s0, 20
+	CALL	PrintCharacter
+
+	FETCH	s0, FLASH_IMAGE_NAME0
+	COMPARE	s0, FF
+	JUMP	Z, PrintImageName_Empty
+
+	CALL	PrintASCII
+
+	FETCH	s0, FLASH_IMAGE_NAME1
+	CALL	PrintASCII
+
+	FETCH	s0, FLASH_IMAGE_NAME2
+	CALL	PrintASCII
+
+	FETCH	s0, FLASH_IMAGE_NAME3
+	CALL	PrintASCII
+
+	FETCH	s0, FLASH_IMAGE_NAME4
+	CALL	PrintASCII
+
+	FETCH	s0, FLASH_IMAGE_NAME5
+	CALL	PrintASCII
+
+	FETCH	s0, FLASH_IMAGE_NAME6
+	CALL	PrintASCII
+
+	FETCH	s0, FLASH_IMAGE_NAME7
+	CALL	PrintASCII
+
+	RETURN
+
+PrintImageName_Empty:
+	LOAD	s0, 20
+	CALL	PrintCharacter
+	LOAD	s0, 20
+	CALL	PrintCharacter
+	LOAD	s0, character_E
+	CALL	PrintASCII
+	LOAD	s0, character_M
+	CALL	PrintASCII
+	LOAD	s0, character_P
+	CALL	PrintASCII
+	LOAD	s0, character_T
+	CALL	PrintASCII
+	LOAD	s0, character_Y
+	CALL	PrintASCII
+	LOAD	s0, 20
+	CALL	PrintCharacter
+	RETURN
+
+;*****************************************************************************-
+; Prints the Galaksija main menu to predefined screen position
+;*****************************************************************************-
+Print_MainMenu:
+
+	LOAD	s0, 0
+	STORE	s0, PRINT_TYPE
+
+	FETCH	s0, SEL_MENU_ITEM
+	COMPARE	s0, 0
+	JUMP	NZ, Print_MainMenu_1
+
+	LOAD	s0, 1
+	STORE	s0, PRINT_TYPE
+Print_MainMenu_1:
+	LOAD	s0, 41
+	STORE	s0, YPOS
+	LOAD	s0, 60
+	STORE	s0, XPOS
+
+	LOAD	s0, 20
+	CALL	PrintCharacter
+
+	LOAD	s0, character_L
+	CALL	PrintASCII
+	LOAD	s0, character_O
+	CALL	PrintASCII
+	LOAD	s0, character_A
+	CALL	PrintASCII
+	LOAD	s0, character_D
+	CALL	PrintASCII
+
+	LOAD	s0, 20
+	CALL	PrintCharacter
+
+	LOAD	s0, character_M
+	CALL	PrintASCII
+	LOAD	s0, character_E
+	CALL	PrintASCII
+	LOAD	s0, character_M
+	CALL	PrintASCII
+	
+
+	LOAD	s0, 20
+	CALL	PrintCharacter
+
+
+	LOAD	s0, 0
+	STORE	s0, PRINT_TYPE
+
+	FETCH	s0, SEL_MENU_ITEM
+	COMPARE	s0, 1
+	JUMP	NZ, Print_MainMenu_2
+
+	LOAD	s0, 1
+	STORE	s0, PRINT_TYPE
+
+Print_MainMenu_2:
+	LOAD	s0, 4E
+	STORE	s0, YPOS
+	LOAD	s0, 60
+	STORE	s0, XPOS
+
+	LOAD	s0, 20
+	CALL	PrintCharacter
+
+	LOAD	s0, character_S
+	CALL	PrintASCII
+	LOAD	s0, character_A
+	CALL	PrintASCII
+	LOAD	s0, character_V
+	CALL	PrintASCII
+	LOAD	s0, character_E
+	CALL	PrintASCII
+
+	LOAD	s0, 20
+	CALL	PrintCharacter
+
+	LOAD	s0, character_M
+	CALL	PrintASCII
+	LOAD	s0, character_E
+	CALL	PrintASCII
+	LOAD	s0, character_M
+	CALL	PrintASCII
+
+	LOAD	s0, 20
+	CALL	PrintCharacter
+
+
+	LOAD	s0, 0
+	STORE	s0, PRINT_TYPE
+
+	FETCH	s0, SEL_MENU_ITEM
+	COMPARE	s0, 2
+	JUMP	NZ, Print_MainMenu_3
+
+	LOAD	s0, 1
+	STORE	s0, PRINT_TYPE
+
+Print_MainMenu_3:
+	LOAD	s0, 5B
+	STORE	s0, YPOS
+	LOAD	s0, 60
+	STORE	s0, XPOS
+
+	LOAD	s0, 20
+	CALL	PrintCharacter
+
+	LOAD	s0, character_C
+	CALL	PrintASCII
+	LOAD	s0, character_P
+	CALL	PrintASCII
+	LOAD	s0, character_U
+	CALL	PrintASCII
+
+	LOAD	s0, 20
+	CALL	PrintCharacter
+
+	LOAD	s0, character_F
+	CALL	PrintASCII
+	LOAD	s0, character_R
+	CALL	PrintASCII
+	LOAD	s0, character_E
+	CALL	PrintASCII
+	LOAD	s0, character_Q
+	CALL	PrintASCII
+
+	LOAD	s0, 20
+	CALL	PrintCharacter
+
+	RETURN	
+
+;*****************************************************************************-
+; Prints the FLASH ID to predefined screen position
+;*****************************************************************************-
+Print_FLASH_ID:
+	; Set XPOS and YPOS for printing
+	LOAD	s0, AE
+	STORE	s0, YPOS
+	LOAD	s0, 1
+	STORE	s0, XPOS
+
+	LOAD	s0, character_F
+	CALL	PrintASCII
+	LOAD	s0, character_I
+	CALL	PrintASCII
+	LOAD	s0, character_D
+	CALL	PrintASCII
+
+	LOAD	s0, 20
+	CALL	PrintCharacter
+	
+	CALL	read_FLASH_ID
+	LOAD	s0, s9		; Manufacturer ID
+	CALL	PrintHex
+	LOAD	s0, s8		; Device ID part 1
+	CALL	PrintHex
+	LOAD	s0, s7
+	CALL	PrintHex
+	RETURN	
+
+;*****************************************************************************-
+; Prints the Device DNA to predefined screen position
+;*****************************************************************************-
+Print_Device_DNA:
+	; Set XPOS and YPOS for printing
+	LOAD	s0, BE
+	STORE	s0, YPOS
+	LOAD	s0, 1
+	STORE	s0, XPOS
+
+	LOAD	s0, character_D
+	CALL	PrintASCII
+	LOAD	s0, character_N
+	CALL	PrintASCII
+	LOAD	s0, character_A
+	CALL	PrintASCII
+	
+	LOAD	s0, 20
+	CALL	PrintCharacter
+
+	CALL	read_device_DNA
+	LOAD	s0, sA
+	CALL	PrintHex
+	LOAD	s0, s9
+	CALL	PrintHex
+	LOAD	s0, s8
+	CALL	PrintHex
+	LOAD	s0, s7
+	CALL	PrintHex
+	LOAD	s0, s6
+	CALL	PrintHex
+	LOAD	s0, s5
+	CALL	PrintHex
+	LOAD	s0, s4
+	CALL	PrintHex
+	LOAD	s0, s3
+	CALL	PrintHex
+
+	RETURN
+	
+;*****************************************************************************-
+; Erase screen with bit set in s0
+;*****************************************************************************-
+
+EraseScreen:
+	OUTPUT	s0, VIDEO_DATA
+	
+	CALL	push_s1
+	CALL	push_s2
+	CALL	push_s3	
+
+	LOAD	s0, 0
+	LOAD	s1, D0
+
+	LOAD	s2, 0
+	LOAD	s3, 1
+
+EraseScreen_l1:
+	OUTPUT	s0, VIDEO_ADDR_L
+	OUTPUT	s1, VIDEO_ADDR_H
+
+	OUTPUT	s2, VIDEO_WR
+	OUTPUT	s3, VIDEO_WR
+	OUTPUT	s2, VIDEO_WR
+		
+	SUB	s0, 1
+	COMPARE	s0, 0
+	JUMP	NZ, EraseScreen_l1
+	SUB	s1, 1
+	COMPARE	s1, FF
+	JUMP	NZ, EraseScreen_l1
+
+	OUTPUT	s1, VIDEO_WR
+
+	CALL	pop_s3
+	CALL	pop_s2
+	CALL	pop_s1
+
+	RETURN		
+	
+;*****************************************************************************-
+; Gets the pressed key in s0. if the key is not pressed returns FF
+;*****************************************************************************-
+GetKey:		
+	INPUT	s0, KEY_STICKY
+	TEST	s0, 1
+	JUMP	NC, GetKey_retFF
+	LOAD	s0, 1
+	OUTPUT	s0, KEY_READ
+	LOAD	s0, 0
+	OUTPUT	s0, KEY_READ
+	INPUT	s0, KEY_CODE
+	RETURN
+
+GetKey_retFF:
+	LOAD	s0, FF
+	RETURN
+
+;*****************************************************************************-
+; Prints the character
+; s0 - character to print
+; X position is read from XPOS scratch pad
+; Y position is read from YPOS scratch pad
+; Returns coordinates for next character
+;*****************************************************************************-
+PrintCharacter:
+	CALL	push_s1
+	CALL	push_s2
+	CALL	push_s3
+	CALL	push_s4
+	CALL	push_s5
+	CALL	push_s6
+	CALL	push_s7
+	CALL	push_s8
+
+	FETCH	s1, XPOS
+	FETCH	s2, YPOS
+
+	OUTPUT	s0, CH_ADDR_L
+
+	LOAD	s8, 0D
+	LOAD	s3, 0
+
+PrintCharacter_Y:
+	OUTPUT	s3, CH_ADDR_H
+	
+	INPUT	s4, CH_DATA	; read the data from character ROM
+	LOAD	s7, 8
+	
+PrintCharacter_X:
+	FETCH	s5, PRINT_TYPE	; 0 - normal, 1 - inverted
+	SL0	s4
+	JUMP	C, PrintCharacter_bit
+	XOR	s5, FF
+PrintCharacter_bit:
+	OUTPUT	s5, VIDEO_DATA
+	OUTPUT	s1, VIDEO_ADDR_L
+	OUTPUT	s2, VIDEO_ADDR_H
+
+	; pulse clock
+	LOAD	s6, 0
+	OUTPUT	s6, VIDEO_WR
+	LOAD	s6, 1
+	OUTPUT	s6, VIDEO_WR
+	LOAD	s6, 0
+	OUTPUT	s6, VIDEO_WR
+
+	ADD	s1, 1
+	SUB	s7, 1
+	JUMP	NZ, PrintCharacter_X
+
+	SUB	s1, 8
+	ADD	s3, 1
+	ADD	s2, 1
+
+	SUB	s8, 1
+	JUMP	NZ, PrintCharacter_Y
+
+	SUB	s2, 0D
+	ADD	s1, 8
+
+	STORE	s1,XPOS
+	STORE	s2, YPOS
+	
+	CALL	pop_s8
+	CALL	pop_s7
+	CALL	pop_s6
+	CALL	pop_s5
+	CALL	pop_s4
+	CALL	pop_s3
+	CALL	pop_s2
+	CALL	pop_s1
+	RETURN
+
+;*****************************************************************************-
+; Prints the hex representation of byte to current screen position
+;*****************************************************************************-
+; Input:
+; s0 - byte to print
+PrintHex:
+	CALL	Byte2Hex		; after return s0 contains upper nibble, s1 contains lower nibble ASCII
+	CALL	PrintCharacter
+	LOAD	s0, s1
+	CALL	PrintCharacter
+	RETURN
+;*****************************************************************************-
+; Prints the ASCII char to current screen position
+;*****************************************************************************-
+; Input:
+; s0 - ASCII
+PrintASCII:
+	CALL	ASCII2CHROM
+	CALL	PrintCharacter
+	RETURN
+		
+;*****************************************************************************-
+; Stack operation subs
+;*****************************************************************************-
+
+push_s0:
+	STORE	s0, (stack_pointer)
+	ADD	stack_pointer, 01
+	RETURN
+
+pop_s0:
+	SUB	stack_pointer, 01
+	FETCH	s0, (stack_pointer)
+	RETURN
+;*****************************************************************************-
+push_s1:
+	STORE	s1, (stack_pointer)
+	ADD	stack_pointer, 01
+	RETURN
+
+pop_s1:
+	SUB	stack_pointer, 01
+	FETCH	s1, (stack_pointer)
+	RETURN
+;*****************************************************************************-
+push_s2:
+	STORE	s2, (stack_pointer)
+	ADD	stack_pointer, 01
+	RETURN
+
+pop_s2:
+	SUB	stack_pointer, 01
+	FETCH	s2, (stack_pointer)
+	RETURN
+;*****************************************************************************-
+push_s3:
+	STORE	s3, (stack_pointer)
+	ADD	stack_pointer, 01
+	RETURN
+
+pop_s3:
+	SUB	stack_pointer, 01
+	FETCH	s3, (stack_pointer)
+	RETURN
+;*****************************************************************************-
+push_s4:
+	STORE	s4, (stack_pointer)
+	ADD	stack_pointer, 01
+	RETURN
+
+pop_s4:
+	SUB	stack_pointer, 01
+	FETCH	s4, (stack_pointer)
+	RETURN
+;*****************************************************************************-
+push_s5:
+	STORE	s5, (stack_pointer)
+	ADD	stack_pointer, 01
+	RETURN
+
+pop_s5:
+	SUB	stack_pointer, 01
+	FETCH	s5, (stack_pointer)
+	RETURN
+;*****************************************************************************-
+push_s6:
+	STORE	s6, (stack_pointer)
+	ADD	stack_pointer, 01
+	RETURN
+
+pop_s6:
+	SUB	stack_pointer, 01
+	FETCH	s6, (stack_pointer)
+	RETURN
+;*****************************************************************************-
+push_s7:
+	STORE	s7, (stack_pointer)
+	ADD	stack_pointer, 01
+	RETURN
+
+pop_s7:
+	SUB	stack_pointer, 01
+	FETCH	s7, (stack_pointer)
+	RETURN
+;*****************************************************************************-
+push_s8:
+	STORE	s8, (stack_pointer)
+	ADD	stack_pointer, 01
+	RETURN
+
+pop_s8:
+	SUB	stack_pointer, 01
+	FETCH	s8, (stack_pointer)
+	RETURN
+
+;*****************************************************************************-
+
+
+
+
+;
+;**************************************************************************************
+; Initialise SPI bus
+;**************************************************************************************
+;
+; This routine should be used to initialise or disable the SPI bus.
+;
+;   SPI_sck      = 0   (bit0)   Clock is Low (prepares for first rising edge)
+;   SPI_rom_cs   = 1   (bit1)   Deselect ROM
+;   SPI_mosi     = 0   (bit7)   Data is Low
+;
+; Registers used s0
+;
+SPI_init: 
+	LOAD s0, 02
+	OUTPUT s0, SPI_out_port
+	STORE s0, SPI_bus_status               ;preserve bus status
+	RETURN
+;
+;
+;**************************************************************************************
+; Enable the SPI FLASH
+;**************************************************************************************
+;
+; This routine is used enable the FLASH connected to the SPI bus.
+; The SPI_init routine must have been used previously.
+;   SPI_rom_cs   = 0   (bit1)   Select ROM
+;
+; Registers used s0
+;
+SPI_flash_enable: 
+	CALL SPI_init	  ;ensures bus state and defines value in s0
+	XOR s0, SPI_rom_cs                     ;select (Low) FLASH
+	OUTPUT s0, SPI_out_port                ;drive bus
+	STORE s0, SPI_bus_status               ;preserve bus status
+	RETURN
+;
+;
+;**************************************************************************************
+; Send and receive one byte on the SPI bus.
+;**************************************************************************************
+;
+; The data supplied in register 's3' is transmitted to the SPI bus and at the same
+; time any received byte is used to replace the value in 's3'. Communication is
+; MSB first with the clock 'SCK' generated by software resulting in a communication
+; rate of 1.786 Mbit/s with a 50MHz clock.
+;
+; Note that you must have previously selected the required device on the bus
+; before attempting communication and you must subsequently deselect the device
+; when appropriate.
+;
+; Entry to this routine assumes that SCK is already Low and the clock will be Low
+; at the end of execution (provided in scratch pad memory location SPI_bus_status).
+;
+; As a 'master' the signal sequence for each bit is as follows..
+;   Transmit data bit on MOSI
+;   Receive data bit from MISO (FLASH memory transmits on previous falling edge)
+;   Drive SCK transition from low to high
+;   Drive SCK transition from high to low.
+;
+; Registers used s0,s1,s2,s3
+;
+SPI_tx_rx: 
+	LOAD s1, 08			;8-bits to transmit and receive
+	FETCH s0, SPI_bus_status	;read current bus status
+next_SPI_tx_rx_bit: 
+	LOAD s2, s3			;determine next MOSI to be transmitted
+	AND s2, 80			;isolate bit in transmit byte
+	AND s0, 7F			;clear bit7 ready for MOSI
+	OR s0, s2			;set bit7 to drive MOSI if data is High
+	OUTPUT s0, SPI_out_port
+	INPUT s2, SPI_in_port		;read MISO
+	TEST s2, SPI_miso		;detect state of received bit
+	SLA s3				;shift new data into result and move to next transmit bit
+	XOR s0, SPI_sck			;drive SCK clock High
+	OUTPUT s0, SPI_out_port
+	XOR s0, SPI_sck			;drive SCK clock Low
+	OUTPUT s0, SPI_out_port
+	SUB s1, 01
+	JUMP NZ, next_SPI_tx_rx_bit	;repeat until finished
+	RETURN
+
+
+;**************************************************************************************
+; Read FLASH Device ID
+;**************************************************************************************
+;
+; Read the Manufacturer and Device ID from AT45DB081D memory and return it in register
+; set [s9,s8,s7]. Reading the device ID is the best way to confirm that SPI communication
+; is established and working correctly.
+;
+; This routine transmits the 'Device ID Read' command 9F hex and then reads the 3 byte
+; response which for the AT45DB081D should be as follows...
+;   1st byte returned in register s9 = Manufacturer ID  = 1F hex
+;   2nd byte returned in register s8 = Device ID part 1 = 25 hex
+;   3rd byte returned in register s7 = Device ID part 2 = 00 hex
+;
+read_FLASH_ID: 
+	CALL SPI_flash_enable                  ;enable FLASH memory
+	LOAD s3, 9F	    ;Read ID command
+	CALL SPI_tx_rx	 ;transmit command
+	CALL SPI_tx_rx	 ;receive Manufacturer ID
+	LOAD s9, s3	    ;display value
+	CALL SPI_tx_rx	 ;Device ID part 1
+	LOAD s8, s3	    ;display value
+	CALL SPI_tx_rx	 ;Device ID part 2
+	LOAD s7, s3	    ;display value
+	CALL SPI_init	  ;FLASH disabled
+	RETURN
+
+
+
+;**************************************************************************************
+; Read status register from AT45DB081D memory
+;**************************************************************************************
+;
+; Transmits command D7 hex and then receives one byte in response
+; which is returned in register 's3'.
+;
+;  bit    meaning
+;   7    RDY/BUSY    ( '1' = ready / '0' = busy )
+;   6    COMP
+;   5    '1'
+;   4    '0'
+;   3    '0'
+;   2    '1'
+;   1    PROTECT
+;   0    PAGE SIZE   ( '0' = 264 bytes / '1' = 256 bytes ) Default is Low
+;
+;
+; Registers used s0,s1,s2,s3
+;
+read_spi_flash_status: 
+	CALL SPI_flash_enable                  ;enable FLASH memory
+	LOAD s3, D7	    ;Read Status register command
+	CALL SPI_tx_rx	 ;transmit command
+	CALL SPI_tx_rx	 ;Receive status register information
+	CALL SPI_init	  ;FLASH disabled
+	STORE s3, AT45DB081D_page_mode         ;refresh page size value in scratch pad
+	RETURN
+	;
+
+
+;**************************************************************************************
+; Routine to transmit the 24-bit address value contained in register set [s9,s8,s7]
+; to the FLASH via the SPI port.
+;**************************************************************************************
+
+spi_tx_address: 
+	LOAD s3, s9	    ;address[23:16]
+	CALL SPI_tx_rx	 ;transmit address
+	LOAD s3, s8	    ;address[15:8]
+	CALL SPI_tx_rx	 ;transmit address
+	LOAD s3, s7	    ;address[7:0]
+	CALL SPI_tx_rx	 ;transmit address
+	RETURN
+
+;**************************************************************************************
+; Read Device DNA into scratch pad memory
+;**************************************************************************************
+;
+; Note that DNA has a specified minimum lifetime of 10 years or 30,000,000 read cycles.
+; Reading at 16 second intervals equates to over 15 years continuous operation. Since it
+; is clearly easier to read the device DNA faster every 16 seconds then designers should
+; ensure a suitable time delay exists between regular read operations.
+;
+; Initialisation ensures that all control signals are Low.
+;
+DNA_init: 
+	LOAD s0, 00	    ;clear all control signals
+	OUTPUT s0, DNA_control_port
+	RETURN
+
+; To read the DNA the following sequence is required...
+;
+;   READ = 1
+;   clock pulse (High then Low).  This transfers the DNA value into the shift register
+;	         Bit 57 will be presented on DOUT (should be '1')
+;
+;   SHIFT = 1
+;   read the DOUT value.   Bits are read MSB first starting with fixed bits "10"
+;   clock pulse (High then Low). Advances shift register to the next bit
+;
+; After 57 repetitions with SHIFT=1 complete DNA value will be acquired.
+; The values of DIN applied during each clock cycle with SHIFT=1 will be shifted into the DNA
+; shift register and would the appear at DOUT if the shift operations continue without a new
+; read cycle.
+;
+; Registers used: s0,s1,s2,s3,s4,s5,s6,s7,s8,s9,sA
+;
+
+read_device_DNA: 
+	LOAD s0, DNA_read                      ;Transfer DNA into shift register
+	OUTPUT s0, DNA_control_port
+	CALL DNA_clk_pulse
+	LOAD s0, DNA_shift                     ;prepare to shift value
+	OUTPUT s0, DNA_control_port
+	LOAD s3, 00	    ;clear bits of result register that will not be overwritten by shifting
+	LOAD s2, 39	    ;57-bits to read DNA value only
+read_DNA_loop: 
+	INPUT s1, DNA_read_port                ;read data bit
+	TEST s1, DNA_dout                      ;isolate data bit (put into carry flag)
+	SLA s3	         ;shift data bit into lsb of register set [sA,s9,s8,s7,s6,s5,s4,s3] <- carry
+	SLA s4
+	SLA s5
+	SLA s6
+	SLA s7
+	SLA s8
+	SLA s9
+	SLA sA
+	CALL DNA_clk_pulse                     ;advance DNA shift register ready to read next DNA bit
+	SUB s2, 01	     ;count bits read
+	JUMP Z, store_DNA
+	JUMP read_DNA_loop
+store_DNA: 
+;	STORE s3, DNA_byte0
+;	STORE s4, DNA_byte1
+;	STORE s5, DNA_byte2
+;	STORE s6, DNA_byte3
+;	STORE s7, DNA_byte4
+;	STORE s8, DNA_byte5
+;	STORE s9, DNA_byte6
+;	STORE sA, DNA_byte7
+	JUMP DNA_init
+
+
+;
+;Generate clock pulse to DNA port
+;
+DNA_clk_pulse: 
+	XOR s0, DNA_clk	;CLK=1
+	OUTPUT s0, DNA_control_port
+	XOR s0, DNA_clk	;CLK=0
+	OUTPUT s0, DNA_control_port
+	RETURN
+
+
+
+
+;*****************************************************************************-
+; Utility functions
+;*****************************************************************************-
+
+; Convert byte to hex value in Galaksija format
+; s0 - byte to convert
+; Output:
+; s0 - upper nibble
+; s1 - lower nibble
+; Galaksija character ROM:
+; letters - A = 1, B = 2, ...
+; numbers - 0 = 0x21, 1 = 0x22
+
+Byte2Hex:
+	CALL	push_s2
+
+	LOAD	s1, s0
+	SR0	s1
+	SR0	s1
+	SR0	s1
+	SR0	s1
+	LOAD	s2, s0
+	AND	s2, 0F
+	LOAD	s0, s2
+	CALL	Nibble2ASCII
+	LOAD	s2, s0
+	LOAD	s0, s1
+	CALL	Nibble2ASCII
+	LOAD	s1, s2
+
+	CALL	pop_s2
+	RETURN
+;*****************************************************************************-
+
+; Convert nibble value to ASCII
+; Input: s0 - nibble to convert
+; Output: s0 - ASCII representation
+
+Nibble2ASCII:	
+	COMPARE	s0, 0A
+	JUMP	C, Nibble2ASCII_number
+	; Nibble to convert is a letter
+	SUB	s0, 9
+	RETURN
+Nibble2ASCII_number:
+	; Nibble to convert is a number	
+;	ADD	s0, 21
+	ADD	s0, 30
+	RETURN
+;*****************************************************************************-
+; Convert ASCII values to character generator ROM
+; Input: s0 - ASCII value to convert
+; Output: s0 - Converted value
+;*****************************************************************************-
+
+ASCII2CHROM:
+;	COMPARE	s0, 41
+;	JUMP	NC, ASCII2CHROM_letter
+	; Character to convert is a number or other character
+
+	; Assume it is a number
+	;SUB	s0, 0F
+;	RETURN
+
+ASCII2CHROM_letter:
+	; Character to convert is a letter
+	AND	s0, BF	; clear bit 6
+	RETURN
+
+;*****************************************************************************-
+; Read byte from RAM
+; Input: sD:sE - address
+; Output: s3 - RAM value
+;*****************************************************************************-
+ReadRAM:
+	; Write RAM address
+	LOAD	s0, sD
+	OUTPUT	s0, RAM_ADDR_H_port
+	LOAD	s0, sE
+	OUTPUT	s0, RAM_ADDR_L_port
+		
+	; Pulse RAM clock
+	LOAD	s0, 0
+	OUTPUT	s0, RAM_WR_CK_port
+	LOAD	s0, RAM_CK
+	OUTPUT	s0, RAM_WR_CK_port
+	LOAD	s0, 0
+	OUTPUT	s0, RAM_WR_CK_port
+
+	; Read RAM data
+	INPUT	s3, RAM_DIN_port
+
+	RETURN
+
+;*****************************************************************************-
+; Write byte to RAM
+; Input: s3 - byte to write, sD:sE - address
+;*****************************************************************************-
+WriteRAM:
+	; Write RAM data
+	OUTPUT	s3, RAM_DOUT_port
+
+	; Write RAM address
+	LOAD	s0, sD
+	OUTPUT	s0, RAM_ADDR_H_port
+	LOAD	s0, sE
+	OUTPUT	s0, RAM_ADDR_L_port
+		
+	; Pulse RAM clock with WR
+	LOAD	s0, RAM_WR
+	OUTPUT	s0, RAM_WR_CK_port
+	LOAD	s0, RAM_WRCK
+	OUTPUT	s0, RAM_WR_CK_port
+	LOAD	s0, 0
+	OUTPUT	s0, RAM_WR_CK_port
+
+	RETURN
+
+;*****************************************************************************-
+; Read 256 bytes from RAM and send it to FLASH buffer
+; Input:
+;		sD:sE - starting RAM addres, RAM address is UPDATED!		
+;*****************************************************************************-
+RAM2FLASH:
+	CALL	push_s4
+	LOAD	s4, 0
+
+RAM2FLASH_1:
+	CALL	ReadRAM		; read byte from RAM to s3
+	CALL	SPI_tx_rx	; write byte to FLASH buffer
+
+	ADD	sE, 01
+	ADDCY	sD, 00		; update RAM address
+
+	ADD	s4, 1
+	JUMP	NZ, RAM2FLASH_1
+
+	CALL	pop_s4
+	RETURN
+	
+;*****************************************************************************-
+; Read 256 bytes from FLASH and write them to RAM
+; Input:
+;		sD:sE - starting RAM addres, RAM address is UPDATED!		
+;*****************************************************************************-
+FLASH2RAM:
+	CALL	push_s4
+	LOAD	s4, 0
+
+FLASH2RAM_1:
+	CALL	SPI_tx_rx	; read byte from FLASH buffer
+	CALL	WriteRAM	; write byte from s3 to RAM
+
+	ADD	sE, 01
+	ADDCY	sD, 00		; update RAM address
+
+	ADD	s4, 1
+	JUMP	NZ, FLASH2RAM_1
+	CALL	pop_s4
+	RETURN
+	
+;*****************************************************************************-
+; FLASH info
+; Only upper part of FLASH is used - pages 1024 to 2047
+; Galaksija memory dump is 8 KB - it takes 32 pages
+; Space for 32 dumps is available
+;*****************************************************************************-
+; FLASH address formation:
+; FLASH address is formed based on a FLASH_IMAGE_NUMBER and FLASH_PAGE_NUMBER
+; FLASH_IMAGE_NUMBER < 32
+; FLASH_PAGE_NUMBER < 32
+;
+; PhyPage = 1024 + FLASH_IMAGE_NUMBER * 32 + FLASH_PAGE_NUMBER
+;*****************************************************************************-
+
+; Make physical FLASH address based on FLASH_IMAGE_NUMBER, FLASH_PAGE_NUMBER and FLASH_EXT_ADDR
+; Store result in s9:s8:s7 for direct interface with spi_tx_address function
+MakeFLASHAddr:
+	LOAD	s7, 0		; lowest address is always 0 for page access
+	FETCH	s8, FLASH_IMAGE_NUMBER
+	LOAD	s9, 0
+
+	CALL	ShiftLefts9s8	; *2
+	CALL	ShiftLefts9s8	; *4
+	CALL	ShiftLefts9s8	; *8
+	CALL	ShiftLefts9s8	; *16
+	CALL	ShiftLefts9s8	; *32
+
+	FETCH	s0, FLASH_PAGE_NUMBER
+	ADD	s8, s0
+
+	CALL	ShiftLefts9s8	; make room for extended addr bit
+	FETCH	s0, FLASH_EXT_ADDR
+	AND	s0, 1
+	ADD	s8, s0
+
+	OR	s9, 08		; MSB of FLASH address must be 1 (pages > 1024)
+	RETURN
+
+;*****************************************************************************-
+ShiftLefts9s8:
+	SL0	s8
+	SLA	s9
+	RETURN
+
+;*****************************************************************************-
+; Write RAM image to FLASH
+; Inputs: 
+;		FLASH_IMAGE_NUMBER should be set to correct value
+;		FLASH_IMAGE_NAME0 to FLASH_IMAGE_NAME7 should be set to correct value
+;*****************************************************************************-
+WriteRAMImage:
+	LOAD	s0, 0
+	STORE	s0, FLASH_PAGE_NUMBER
+	LOAD	sD, 0
+	LOAD	sE, 0		; set starting RAM address to 0
+
+	CALL	WriteRAMImageName	; Write RAM image name to buffer
+
+	LOAD	s0, 0
+	STORE	s0, FLASH_EXT_ADDR	; no extended adressing
+	
+WriteRAMImage_loop:
+	CALL	SPI_flash_enable	; Enable FLASH
+	LOAD	s3, 84			; Buffer Write command = 84 hex
+	CALL	SPI_tx_rx		; Send command
+
+	CALL	MakeFLASHAddr		; Make FLASH address
+	CALL	spi_tx_address		; Send address to FLASH
+
+	CALL	RAM2FLASH		; transmit 256 bytes from RAM to FLASH
+
+	CALL	SPI_init		; disable FLASH
+
+	CALL	SPI_flash_enable	; enable FLASH
+	LOAD	s3, 83			; write buffer to FLASH command
+	CALL	SPI_tx_rx		; transmit command
+	CALL	spi_tx_address		; transmit 24-bit address in register set [s9,s8,s7]
+	CALL	SPI_init		; FLASH disabled
+	
+	; Check FLASH status
+WriteRAMImage_wait:
+	CALL	read_spi_flash_status	; read FLASH status register
+	TEST	s3, 80
+	JUMP	NC ,WriteRAMImage_wait	; status bit = 0 (FLASH busy)
+
+	; FLASH page writing is complete, go to next page
+	FETCH	s0, FLASH_PAGE_NUMBER
+	ADD	s0, 01
+	STORE	s0, FLASH_PAGE_NUMBER
+	COMPARE	s0, 20
+	JUMP	NZ, WriteRAMImage_loop
+	
+	LOAD	s0, 0
+	STORE	s0, FLASH_PAGE_NUMBER
+	RETURN
+
+;*****************************************************************************-
+;
+;*****************************************************************************-
+
+WriteRAMImageName:
+	LOAD	s0, 0
+	STORE	s0, FLASH_PAGE_NUMBER
+
+	LOAD	s0, 1
+	STORE	s0, FLASH_EXT_ADDR	; extended adressing
+
+	CALL	SPI_flash_enable	; Enable FLASH
+	LOAD	s3, 84			; Buffer Write command = 84 hex
+	CALL	SPI_tx_rx		; Send command
+
+	CALL	MakeFLASHAddr		; Make FLASH address
+	CALL	spi_tx_address		; Send address to FLASH
+
+	FETCH	s3, FLASH_IMAGE_NAME0
+	CALL	SPI_tx_rx
+	
+	FETCH	s3, FLASH_IMAGE_NAME1
+	CALL	SPI_tx_rx
+
+	FETCH	s3, FLASH_IMAGE_NAME2
+	CALL	SPI_tx_rx
+
+	FETCH	s3, FLASH_IMAGE_NAME3
+	CALL	SPI_tx_rx
+
+	FETCH	s3, FLASH_IMAGE_NAME4
+	CALL	SPI_tx_rx
+
+	FETCH	s3, FLASH_IMAGE_NAME5
+	CALL	SPI_tx_rx
+
+	FETCH	s3, FLASH_IMAGE_NAME6
+	CALL	SPI_tx_rx
+
+	FETCH	s3, FLASH_IMAGE_NAME7
+	CALL	SPI_tx_rx
+
+	CALL	SPI_init		; FLASH disabled
+
+	LOAD	s0, 0
+	STORE	s0, FLASH_EXT_ADDR	; no extended adressing
+	RETURN
+	
+;*****************************************************************************-
+; Reads RAM image name to FLASH_IMAGE_NAME0 to FLASH_IMAGE_NAME7
+;*****************************************************************************-
+ReadRAMImageName:
+	LOAD	s0, 0
+	STORE	s0, FLASH_PAGE_NUMBER
+
+	LOAD	s0, 1
+	STORE	s0, FLASH_EXT_ADDR	; extended adressing
+
+	CALL	SPI_flash_enable	; Enable FLASH
+	LOAD	s3, D2			; Read FLASH memory command = 0xD2
+	CALL	SPI_tx_rx		; Send command
+
+	CALL	MakeFLASHAddr		; Make FLASH address
+	CALL	spi_tx_address		; Send address to FLASH
+
+	CALL	SPI_tx_rx
+	CALL	SPI_tx_rx
+	CALL	SPI_tx_rx
+	CALL	SPI_tx_rx		; 4 dummy bytes required by FLASH specs
+
+	CALL	SPI_tx_rx
+	STORE	s3, FLASH_IMAGE_NAME0
+	
+	CALL	SPI_tx_rx
+	STORE	s3, FLASH_IMAGE_NAME1
+
+	CALL	SPI_tx_rx
+	STORE	s3, FLASH_IMAGE_NAME2
+
+	CALL	SPI_tx_rx
+	STORE	s3, FLASH_IMAGE_NAME3
+
+	CALL	SPI_tx_rx
+	STORE	s3, FLASH_IMAGE_NAME4
+
+	CALL	SPI_tx_rx
+	STORE	s3, FLASH_IMAGE_NAME5
+
+	CALL	SPI_tx_rx
+	STORE	s3, FLASH_IMAGE_NAME6
+
+	CALL	SPI_tx_rx
+	STORE	s3, FLASH_IMAGE_NAME7
+
+	CALL	SPI_init		; FLASH disabled
+
+	LOAD	s0, 0
+	STORE	s0, FLASH_EXT_ADDR	; extended adressing
+	RETURN
+
+
+;*****************************************************************************-
+; Read RAM image from FLASH
+; Inputs: 
+;		FLASH_IMAGE_NUMBER should be set to correct value
+;*****************************************************************************-
+ReadRAMImage:
+	LOAD	s0, 0
+	STORE	s0, FLASH_PAGE_NUMBER
+	LOAD	sD, 0
+	LOAD	sE, 0		; set starting RAM address to 0
+
+	LOAD	s0, 0
+	STORE	s0, FLASH_EXT_ADDR	; no extended adressing
+	
+ReadRAMImage_loop:
+	CALL	SPI_flash_enable	; Enable FLASH
+	LOAD	s3, D2			; Buffer Write command = 84 hex
+	CALL	SPI_tx_rx		; Send command
+
+	CALL	MakeFLASHAddr		; Make FLASH address
+	CALL	spi_tx_address		; Send address to FLASH
+
+	CALL	SPI_tx_rx		; Dummy
+	CALL	SPI_tx_rx		; Dummy
+	CALL	SPI_tx_rx		; Dummy
+	CALL	SPI_tx_rx		; Dummy
+
+	CALL	FLASH2RAM		; transfer 256 bytes from FLASH to RAM
+
+	CALL	SPI_init		; disable FLASH
+
+	; FLASH page reading is complete, go to next page
+	FETCH	s0, FLASH_PAGE_NUMBER
+	ADD	s0, 01
+	STORE	s0, FLASH_PAGE_NUMBER
+	COMPARE	s0, 20
+	JUMP	NZ, ReadRAMImage_loop
+	
+	LOAD	s0, 0
+	STORE	s0, FLASH_PAGE_NUMBER
+	RETURN
+
+;*****************************************************************************-
+; Interrupt handler
+;*****************************************************************************-
+
+interrupt_handler:
+	RETURNI ENABLE	; return from interrupt, enable interrupts
+
+ADDRESS 3FF
+	JUMP	interrupt_handler
+

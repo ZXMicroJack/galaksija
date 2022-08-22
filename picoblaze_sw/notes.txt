@@ -1,0 +1,8 @@
+How to stop cpu clock?
+Before CPU frequency scaling HSYNC MMV and VSYNC MMV should be referenced to PIX_CLK instead of CLK_50M.
+
+Derive clock for RAM and PS2 keyboard which won't be turned off.
+
+try to insert clock buffers to all clocks, or all but vga clock
+
+Solve FLASH writing and reading. Second port should be added to RAM in order to read/write to it.

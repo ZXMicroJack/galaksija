@@ -105,6 +105,7 @@ architecture rtl of Galaksija is
 	signal PIX_CLK : std_logic;	-- Pixel clock, should be 6.144 MHz
 	
 	signal iPIX_CLK : std_logic;
+	signal KEYB_CLK : std_logic;
 
 	--
 	-- Address decoder
@@ -540,12 +541,13 @@ tristategenerate: for i in 0 to 7 generate
 	
 	PIX_CLK <= iPIX_CLK;
 
-	deskew_VGA: clk_deskew 
-		port map(
-						CLK_IN => extCLK_50M,
-						CLK_OUT => CLK_50M_VGA,
-						CLK_FB => CLK_50M_VGA
-					);
+-- 	deskew_VGA: clk_deskew 
+-- 		port map(
+-- 						CLK_IN => extCLK_50M,
+-- 						CLK_OUT => CLK_50M_VGA,
+-- 						CLK_FB => CLK_50M_VGA
+-- 					);
+  CLK_50M_VGA <= extCLK_50M;
 
 -- 	CLK_50M_PBLAZE <= extCLK_50M;
 	CLK_50M <= extCLK_50M;
@@ -565,6 +567,8 @@ tristategenerate: for i in 0 to 7 generate
 			iPIX_CLK <= '0';	-- Stop Galaksija clock if Picoblaze is active
 		end if;
 	end process;
+	
+  KEYB_CLK        <= PIX_CLK_COUNTER(2);      -- 6,25 MHz
 	
 	--
 	-- Pixel clock divider
@@ -785,7 +789,8 @@ tristategenerate: for i in 0 to 7 generate
 	--
 	PS2_KBD: galaksija_keyboard_v2
    Port map ( 
-			  CLK => CLK_50M,
+-- 			  CLK => CLK_50M,
+        CLK => KEYB_CLK,
 			  NMI_n => NMI_n,
            PS2_DATA => PS2_DATA,
            PS2_CLK => PS2_CLK,

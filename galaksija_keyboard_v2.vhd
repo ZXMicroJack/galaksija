@@ -28,12 +28,12 @@ entity galaksija_keyboard_v2 is
 end galaksija_keyboard_v2;
 
 architecture rtl of galaksija_keyboard_v2 is
-	component keyboard IS
-		PORT(	keyboard_clk, keyboard_data, clock , 
-				reset, read		: IN	STD_LOGIC;
-				scan_code		: OUT	STD_LOGIC_VECTOR(7 DOWNTO 0);
-				scan_ready		: OUT	STD_LOGIC);
-	end component keyboard;
+-- 	component keyboard IS
+-- 		PORT(	keyboard_clk, keyboard_data, clock , 
+-- 				reset, read		: IN	STD_LOGIC;
+-- 				scan_code		: OUT	STD_LOGIC_VECTOR(7 DOWNTO 0);
+-- 				scan_ready		: OUT	STD_LOGIC);
+-- 	end component keyboard;
 	
 	signal kbd_rd : std_logic; -- read scancode from keyboard
 	signal scan_code, scan_code_int : std_logic_vector(7 downto 0);
@@ -59,16 +59,22 @@ architecture rtl of galaksija_keyboard_v2 is
 	
 	signal ESC_STATE : std_logic := '0';
 begin
-		PS2KEYBOARD: keyboard
-		port map (
-						keyboard_clk => PS2_CLK,
-						keyboard_data => PS2_DATA,
-						clock => CLK,
-						reset => RESET_n,
-						read => kbd_rd,
-						scan_code => scan_code_int,
-						scan_ready => scan_ready_int
-					);
+    PS2KEYBOARD : entity work.ps2
+    port map(clockPs2 => CLK,
+				 clock    => PS2_CLK,
+				 data     => PS2_DATA,
+				 received => scan_ready_int,
+				 scancode => scan_code_int );						  
+-- 		PS2KEYBOARD: keyboard
+-- 		port map (
+-- 						keyboard_clk => PS2_CLK,
+-- 						keyboard_data => PS2_DATA,
+-- 						clock => CLK,
+-- 						reset => RESET_n,
+-- 						read => kbd_rd,
+-- 						scan_code => scan_code_int,
+-- 						scan_ready => scan_ready_int
+-- 					);
 
 		-- scan_ready_int has asynchronous reset
 		process(scan_ready_int, CLK)

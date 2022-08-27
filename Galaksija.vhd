@@ -33,6 +33,8 @@ entity Galaksija is
 				-- End of external port
 				
 				LINE_IN		: in std_logic;
+				AUDIO_LEFT : out std_logic;
+				AUDIO_RIGHT : out std_logic;
 				
 				VGA_HSYNC 	: inout STD_LOGIC;
 				VGA_VSYNC 	: inout STD_LOGIC;
@@ -119,7 +121,7 @@ architecture rtl of Galaksija is
 	signal LATCH_KBD_CS_n : std_logic;
 	signal DECODER_EN : std_logic;
 	
-	signal LATCH_DATA : std_logic_vector(5 downto 0) := "111111"; -- Signal from latch
+	signal LATCH_DATA : std_logic_vector(5 downto 0) := "111111"; -- Signal from latchs
 	signal LATCH_D5 : std_logic;
 	signal LATCH_CLK : std_logic;
 
@@ -183,6 +185,9 @@ architecture rtl of Galaksija is
 	
 	
 	signal port_FFFF : std_logic_vector(2 downto 0) := "111";
+	signal CAS_N : std_logic;
+	signal CAS_P : std_logic;
+	
 	--
 	-- Components
 	-- 
@@ -417,6 +422,9 @@ architecture rtl of Galaksija is
 	signal COLORS : std_logic_vector(2 downto 0);
 
 	signal port_FFFE : std_logic := '0';
+-- 	signal cass_out : std_logic;
+	signal audio_out : std_logic;
+	signal DAC_IN : std_logic_vector(7 downto 0);
 begin
 	--
 	-- Expansion port
@@ -825,7 +833,15 @@ tristategenerate: for i in 0 to 7 generate
 	LATCH_D5 <= LATCH_DATA(5);
 	LATCH_D4 <= LATCH_DATA(4);
 	LATCH_D0 <= LATCH_DATA(0);
-
+	
+  --LATCH_D6 <= LATCH_DATA(6); -- cassette port output bit 0
+  --LATCH_D2 <= LATCH_DATA(2); -- cassette port output bit 1
+  --Cassette port is high if both output bits are 1, low if both are 0 and
+  --zero if one bit is 1 and one is 0.
+  --pulse is 134 samples 2 pulses in 134 samples for 1.
+  
+--   cass_out <= LATCH_DATA(4) and LATCH_DATA(0);
+  
 	process(D, PIX_CLK)
 	begin
 		if (PIX_CLK'event) and (PIX_CLK = '1') then
@@ -996,6 +1012,21 @@ tristategenerate: for i in 0 to 7 generate
 	-- End of VGA output
 	--
 
+  DAC_L: entity work.dac2
+    port map(clk_i   => PIX_CLK,		--CLK_50M,
+            res_n_i => RESET_n,
+            dac_i   => DAC_IN,
+            dac_o   => audio_out);
+  AUDIO_RIGHT <= audio_out;
+  AUDIO_LEFT <= audio_out;
+	CAS_P <= '1' when (LATCH_DATA(4)='1' and LATCH_DATA(0)='1') else '0';
+	CAS_N <= '1' when (LATCH_DATA(4)='0' and LATCH_DATA(0)='0') else '0';
+	
+	DAC_IN(7 downto 0) <= CAS_N&CAS_P&CAS_P&CAS_P&CAS_P&CAS_P&CAS_P&CAS_P;
+
+-- 	DAC_IN(7 downto 0) <= X"80" when (LATCH_DATA(4)='1' and LATCH_DATA(0)='1') else
+--                         X"7F" when (LATCH_DATA(4)='0' and LATCH_DATA(0)='0') else
+--                         X"00";
 	--
 	-- A simple circuit to monitor software horizontal position
 	--

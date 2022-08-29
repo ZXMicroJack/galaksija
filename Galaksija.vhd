@@ -187,6 +187,10 @@ architecture rtl of Galaksija is
 	signal port_FFFF : std_logic_vector(2 downto 0) := "111";
 	signal CAS_N : std_logic;
 	signal CAS_P : std_logic;
+	signal CAS_Z : std_logic;
+	signal CAS_NZ : std_logic;
+	
+	-- 0x80 if z, 0xff if p, and 0x00 if n
 	
 	--
 	-- Components
@@ -1021,8 +1025,10 @@ tristategenerate: for i in 0 to 7 generate
   AUDIO_LEFT <= audio_out;
 	CAS_P <= '1' when (LATCH_DATA(4)='1' and LATCH_DATA(0)='1') else '0';
 	CAS_N <= '1' when (LATCH_DATA(4)='0' and LATCH_DATA(0)='0') else '0';
-	
-	DAC_IN(7 downto 0) <= CAS_N&CAS_P&CAS_P&CAS_P&CAS_P&CAS_P&CAS_P&CAS_P;
+	CAS_Z <= '1' when (CAS_P='0' and CAS_N='0') else '0';
+	CAS_NZ <= '1' when (CAS_P='1' or CAS_N='1') else '0';
+-- 	DAC_IN(7 downto 0) <= CAS_N&CAS_NZ&CAS_NZ&CAS_NZ&CAS_NZ&CAS_NZ&CAS_NZ&CAS_NZ;
+	DAC_IN(7 downto 0) <= (CAS_P or CAS_Z)&CAS_NZ&CAS_NZ&CAS_NZ&CAS_NZ&CAS_NZ&CAS_NZ&CAS_NZ;
 
 -- 	DAC_IN(7 downto 0) <= X"80" when (LATCH_DATA(4)='1' and LATCH_DATA(0)='1') else
 --                         X"7F" when (LATCH_DATA(4)='0' and LATCH_DATA(0)='0') else

@@ -179,7 +179,8 @@ architecture rtl of Galaksija is
 
 	signal PBLAZE_CHADDR : std_logic_vector(10 downto 0);
 	
-	signal CLK_SEL : std_logic_vector(1 downto 0) := "11";
+-- 	signal CLK_SEL : std_logic_vector(1 downto 0) := "11";
+	signal CLK_SEL : std_logic_vector(1 downto 0) := "00";
 	
 	signal CLK_50M, CLK_50M_VGA, CLK_50M_PBLAZE : std_logic;
 	
@@ -429,6 +430,7 @@ architecture rtl of Galaksija is
 -- 	signal cass_out : std_logic;
 	signal audio_out : std_logic;
 	signal DAC_IN : std_logic_vector(7 downto 0);
+	signal CLK_12M288 : std_logic;
 begin
 	--
 	-- Expansion port
@@ -535,6 +537,7 @@ tristategenerate: for i in 0 to 7 generate
 	-- Pixel clock
 	-- For initial release it is generated as CLK_50M/8. Fix to generate correct clock of 6.144 MHz (with DCM)
 	-- 
+	
 	process(CLK_50M, PIX_CLK_COUNTER)
 	begin
 		if (CLK_50M'event) and (CLK_50M = '1') then

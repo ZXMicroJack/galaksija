@@ -16,9 +16,9 @@ entity Galaksija is
 				PS2_CLK		: in STD_LOGIC;
 				PS2_DATA		: in STD_LOGIC;
 	 
-				VIDEO_DATA	: out STD_LOGIC;
-				VIDEO_SYNC 	: out STD_LOGIC;
-				
+-- 				VIDEO_DATA	: out STD_LOGIC;
+-- 				VIDEO_SYNC 	: out STD_LOGIC;
+-- 				
 				LATCH_D0		: out STD_LOGIC;
 				LATCH_D4		: out STD_LOGIC;
 				
@@ -190,6 +190,14 @@ architecture rtl of Galaksija is
 	signal CAS_P : std_logic;
 	signal CAS_Z : std_logic;
 	signal CAS_NZ : std_logic;
+
+  signal VGA_HSYNC_int    : std_logic;
+  signal VGA_VSYNC_int    : std_logic;
+  signal VGA_R_int                        : std_logic;
+  signal VGA_G_int                        : std_logic;
+  signal VGA_B_int                        : std_logic;
+  signal VIDEO_DATA       : std_logic;
+  signal VIDEO_SYNC       : std_logic;
 	
 	-- 0x80 if z, 0xff if p, and 0x00 if n
 	
@@ -302,7 +310,8 @@ architecture rtl of Galaksija is
 				  ESC : out std_logic;
 				  KEY_CODE : out std_logic_vector(7 downto 0);
 			     KEY_STROBE : out std_logic;
-				  RESET_n : in STD_LOGIC
+				  RESET_n : in STD_LOGIC;
+          VIDEO_toggle : out std_logic			  
 				  );
 	end component galaksija_keyboard_v2;
 
@@ -431,6 +440,8 @@ architecture rtl of Galaksija is
 	signal audio_out : std_logic;
 	signal DAC_IN : std_logic_vector(7 downto 0);
 	signal CLK_12M288 : std_logic;
+  signal VIDEO_toggle : std_logic;
+  signal VGA_MODE : std_logic := '1';
 begin
 	--
 	-- Expansion port
@@ -475,6 +486,17 @@ tristategenerate: for i in 0 to 7 generate
 					EN_n => Dext_in_en_n
 				);
 	end generate;
+	
+	--
+	-- clock generation
+	--
+	clocks: entity work.clock
+    port map(
+      CLK_IN1 => extCLK_50M,
+      CLK_OUT1 => CLK_12M288,
+      RESET => '0',
+      LOCKED => open
+    );
 
 	--
 	-- CPU instantation
@@ -538,9 +560,9 @@ tristategenerate: for i in 0 to 7 generate
 	-- For initial release it is generated as CLK_50M/8. Fix to generate correct clock of 6.144 MHz (with DCM)
 	-- 
 	
-	process(CLK_50M, PIX_CLK_COUNTER)
+	process(CLK_12M288, PIX_CLK_COUNTER)
 	begin
-		if (CLK_50M'event) and (CLK_50M = '1') then
+		if (CLK_12M288'event) and (CLK_12M288 = '1') then
 			PIX_CLK_COUNTER <= PIX_CLK_COUNTER + 1;
 		end if;
 	end process;
@@ -562,20 +584,22 @@ tristategenerate: for i in 0 to 7 generate
 -- 						CLK_OUT => CLK_50M_VGA,
 -- 						CLK_FB => CLK_50M_VGA
 -- 					);
-  CLK_50M_VGA <= extCLK_50M;
+--   CLK_50M_VGA <= extCLK_50M;
+  CLK_50M_VGA <= CLK_12M288;
 
 -- 	CLK_50M_PBLAZE <= extCLK_50M;
-	CLK_50M <= extCLK_50M;
+-- 	CLK_50M <= extCLK_50M;
+	CLK_50M <= CLK_12M288;
 
 	-- CLK_SEL is set by Picoblaze via CPU_FREQ menu
-	process (PIX_CLK_COUNTER, CLK_SEL, ESC_STATE, CLK_50M)
+	process (PIX_CLK_COUNTER, CLK_SEL, ESC_STATE, CLK_12M288)
 	begin
 		if (ESC_STATE = '0') then
 			case CLK_SEL is
-				when "00" => iPIX_CLK <= PIX_CLK_COUNTER(2);
-				when "01" => iPIX_CLK <= PIX_CLK_COUNTER(1);
+				when "00" => iPIX_CLK <= PIX_CLK_COUNTER(0);
+				when "01" => iPIX_CLK <= CLK_12M288;
 				when "10" => iPIX_CLK <= PIX_CLK_COUNTER(0);
-				when "11" => iPIX_CLK <= CLK_50M;
+				when "11" => iPIX_CLK <= CLK_12M288;
 				when others => null;
 			end case;
 		else
@@ -583,7 +607,7 @@ tristategenerate: for i in 0 to 7 generate
 		end if;
 	end process;
 	
-  KEYB_CLK        <= PIX_CLK_COUNTER(2);      -- 6,25 MHz
+  KEYB_CLK        <= PIX_CLK_COUNTER(0);      -- 6,25 MHz
 	
 	--
 	-- Pixel clock divider
@@ -816,7 +840,8 @@ tristategenerate: for i in 0 to 7 generate
 			  ESC => ESC_STATE,
 			  KEY_CODE => KEY_CODE,
 			  KEY_STROBE => KEY_STROBE,
-			  RESET_n => RESET1_n
+			  RESET_n => RESET1_n,
+			  VIDEO_toggle => VIDEO_toggle
 			  );
 	
 	--
@@ -858,7 +883,8 @@ tristategenerate: for i in 0 to 7 generate
 	
 	-- Character generator address	
 	CHROM_A <= LATCH_DATA(3 downto 0) & TMP(7) & TMP(5 downto 0) when ESC_STATE = '0' else PBLAZE_CHADDR;
-	CHROM_CLK <= PIX_CLK when ESC_STATE = '0' else CLK_50M;
+-- 	CHROM_CLK <= PIX_CLK when ESC_STATE = '0' else CLK_50M;
+	CHROM_CLK <= PIX_CLK when ESC_STATE = '0' else '0';
 
 	CH_GEN_ROM: galaksija_chgen_rom
 	port map (
@@ -896,9 +922,9 @@ tristategenerate: for i in 0 to 7 generate
 	-- Register signals to avoid excessive clock skew
 	--
 
-		process (CLK_50M, VIDEO_DATA_int, SYNC, WAIT_n, RESET_n, HPOS)
+		process (CLK_12M288, VIDEO_DATA_int, SYNC, WAIT_n, RESET_n, HPOS)
 		begin
-			if (CLK_50M'event) and (CLK_50M = '1') then
+			if (CLK_12M288'event) and (CLK_12M288 = '1') then
 				RESET_n_50M <= RESET_n;
 				VIDEO_DATA_int_50M <= VIDEO_DATA_int;
 				SYNC_50M <= SYNC;
@@ -940,36 +966,48 @@ tristategenerate: for i in 0 to 7 generate
 	--
 	--
 
-	VGAOUT: composite_to_vga
-				port map(
-								CLK => PIX_CLK,
-								RESET_n => RESET_n_VGA,
-								VIDEO_DATA => VIDEO_DATA_int_VGA,
-								VIDEO_SYNC => SYNC_VGA,
-								START_FRAME_n => WAIT_n_VGA,
-								HPOS => HPOS_VGA,
-								
-								ESC_STATE => ESC_STATE,
-								CLK_W2 => CLK_50M_VGA,
-								WR2 => PBLAZE_VWR_VGA,
-								AWR2 => PBLAZE_VADDR_VGA,
-								DIN2 => PBLAZE_VDATA_VGA,
-
-								COL_VADDR => VGA_VADDR,
-								COL_HADDR => VGA_HADDR,
-								COL_CLK => VGA_CLK25M,
-																
-								CLK_50M => CLK_50M_VGA,
-								VGA_HSYNC => VGA_HSYNC,
-								VGA_VSYNC => VGA_VSYNC,
-								VGA_VIDEO => VGA_VIDEO
-							);
+       VGA_RGB_SWITCH : process(VGA_MODE, VIDEO_toggle) begin
+    if (VIDEO_toggle'event) and (VIDEO_toggle = '1') then
+      VGA_MODE <= not VGA_MODE;
+    end if;
+       end process;
+       
+       VGA_R <= VGA_R_int when VGA_MODE = '1' else VIDEO_DATA;
+       VGA_G <= VGA_G_int when VGA_MODE = '1' else VIDEO_DATA;
+       VGA_B <= VGA_B_int when VGA_MODE = '1' else VIDEO_DATA;
+       VGA_HSYNC <= VGA_HSYNC_int when VGA_MODE = '1' else VIDEO_SYNC;
+       VGA_VSYNC <= VGA_VSYNC_int when VGA_MODE = '1' else '1';
 	
-	VGA_R <= VGA_VIDEO and not(port_FFFF(2)) when port_FFFE = '0' else
+-- 	VGAOUT: composite_to_vga
+-- 				port map(
+-- 								CLK => PIX_CLK,
+-- 								RESET_n => RESET_n_VGA,
+-- 								VIDEO_DATA => VIDEO_DATA_int_VGA,
+-- 								VIDEO_SYNC => SYNC_VGA,
+-- 								START_FRAME_n => WAIT_n_VGA,
+-- 								HPOS => HPOS_VGA,
+-- 								
+-- 								ESC_STATE => ESC_STATE,
+-- 								CLK_W2 => CLK_50M_VGA,
+-- 								WR2 => PBLAZE_VWR_VGA,
+-- 								AWR2 => PBLAZE_VADDR_VGA,
+-- 								DIN2 => PBLAZE_VDATA_VGA,
+-- 
+-- 								COL_VADDR => VGA_VADDR,
+-- 								COL_HADDR => VGA_HADDR,
+-- 								COL_CLK => VGA_CLK25M,
+-- 																
+-- 								CLK_50M => CLK_50M_VGA,
+-- 								VGA_HSYNC => VGA_HSYNC_int,
+-- 								VGA_VSYNC => VGA_VSYNC_int,
+-- 								VGA_VIDEO => VGA_VIDEO
+-- 							);
+	
+	VGA_R_int <= VGA_VIDEO and not(port_FFFF(2)) when port_FFFE = '0' else
 				VGA_VIDEO and not(COLORS(2));
-	VGA_G <= VGA_VIDEO and not(port_FFFF(1)) when port_FFFE = '0' else
+	VGA_G_int <= VGA_VIDEO and not(port_FFFF(1)) when port_FFFE = '0' else
 				VGA_VIDEO and not(COLORS(1));
-	VGA_B <= VGA_VIDEO and not(port_FFFF(0)) when port_FFFE = '0' else
+	VGA_B_int <= VGA_VIDEO and not(port_FFFF(0)) when port_FFFE = '0' else
 				VGA_VIDEO and not(COLORS(0));
 	
 	-- Color

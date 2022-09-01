@@ -23,7 +23,8 @@ entity galaksija_keyboard_v2 is
 			  ESC : out std_logic;
 			  KEY_CODE : out std_logic_vector(7 downto 0);
 			  KEY_STROBE : out std_logic;
-			  RESET_n : in STD_LOGIC
+			  RESET_n : in STD_LOGIC;
+			  VIDEO_toggle : out std_logic
 			  );
 end galaksija_keyboard_v2;
 
@@ -332,6 +333,14 @@ begin
 					elsif (set = '1') then
 						SHIFT_RIGHT <= '0';
 					end if;
+				end if;
+				
+				if (scan_code = X"7E") then
+          if (clr = '1') then
+            VIDEO_toggle <= '1';
+          elsif (set = '1') then 
+            VIDEO_toggle <= '0';
+          end if;
 				end if;
 			end if;
 		end process;

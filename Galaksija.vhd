@@ -279,11 +279,11 @@ architecture rtl of Galaksija is
 				  START_FRAME_n : in  STD_LOGIC;	-- Should be connected to WAIT_n signal
 				  HPOS : in STD_LOGIC;	-- Horizontal position indicator 2BA8: '1' when horizontal position = 11 else '0'
 
-				  ESC_STATE : in STD_LOGIC;
-				  CLK_W2 : in STD_LOGIC;
-				  WR2 : in STD_LOGIC;
-				  AWR2 : in STD_LOGIC_VECTOR(15 downto 0);
-				  DIN2 : in STD_LOGIC;
+-- 				  ESC_STATE : in STD_LOGIC;
+-- 				  CLK_W2 : in STD_LOGIC;
+-- 				  WR2 : in STD_LOGIC;
+-- 				  AWR2 : in STD_LOGIC_VECTOR(15 downto 0);
+-- 				  DIN2 : in STD_LOGIC;
 
 				  COL_VADDR : out STD_LOGIC_VECTOR(5 downto 0);
 				  COL_HADDR : out STD_LOGIC_VECTOR(5 downto 0);
@@ -440,6 +440,7 @@ architecture rtl of Galaksija is
 	signal audio_out : std_logic;
 	signal DAC_IN : std_logic_vector(7 downto 0);
 	signal CLK_12M288 : std_logic;
+	signal CLK_12M288B : std_logic;
   signal VIDEO_toggle : std_logic;
   signal VGA_MODE : std_logic := '1';
 begin
@@ -494,6 +495,7 @@ tristategenerate: for i in 0 to 7 generate
     port map(
       CLK_IN1 => extCLK_50M,
       CLK_OUT1 => CLK_12M288,
+      CLK_OUT2 => CLK_12M288B,
       RESET => '0',
       LOCKED => open
     );
@@ -585,7 +587,7 @@ tristategenerate: for i in 0 to 7 generate
 -- 						CLK_FB => CLK_50M_VGA
 -- 					);
 --   CLK_50M_VGA <= extCLK_50M;
-  CLK_50M_VGA <= CLK_12M288;
+--   CLK_50M_VGA <= CLK_12M288B;
 
 -- 	CLK_50M_PBLAZE <= extCLK_50M;
 -- 	CLK_50M <= extCLK_50M;
@@ -638,7 +640,7 @@ tristategenerate: for i in 0 to 7 generate
 			VSYNC_DIV <= VSYNC_DIV(8 downto 0) & VSYNC_DIV(9);
 		end if;
 	end process;
-
+	
 	HSYNC <= HSYNC_DIV(4);
 	VSYNC <= VSYNC_DIV(9);
 	VIDEO_INT <= VSYNC_DIV(1);
@@ -978,30 +980,30 @@ tristategenerate: for i in 0 to 7 generate
        VGA_HSYNC <= VGA_HSYNC_int when VGA_MODE = '1' else VIDEO_SYNC;
        VGA_VSYNC <= VGA_VSYNC_int when VGA_MODE = '1' else '1';
 	
--- 	VGAOUT: composite_to_vga
--- 				port map(
--- 								CLK => PIX_CLK,
--- 								RESET_n => RESET_n_VGA,
--- 								VIDEO_DATA => VIDEO_DATA_int_VGA,
--- 								VIDEO_SYNC => SYNC_VGA,
--- 								START_FRAME_n => WAIT_n_VGA,
--- 								HPOS => HPOS_VGA,
--- 								
+	VGAOUT: composite_to_vga
+				port map(
+								CLK => PIX_CLK,
+								RESET_n => RESET_n_VGA,
+								VIDEO_DATA => VIDEO_DATA_int_VGA,
+								VIDEO_SYNC => SYNC_VGA,
+								START_FRAME_n => WAIT_n_VGA,
+								HPOS => HPOS_VGA,
+								
 -- 								ESC_STATE => ESC_STATE,
 -- 								CLK_W2 => CLK_50M_VGA,
 -- 								WR2 => PBLAZE_VWR_VGA,
 -- 								AWR2 => PBLAZE_VADDR_VGA,
 -- 								DIN2 => PBLAZE_VDATA_VGA,
 -- 
--- 								COL_VADDR => VGA_VADDR,
--- 								COL_HADDR => VGA_HADDR,
--- 								COL_CLK => VGA_CLK25M,
--- 																
--- 								CLK_50M => CLK_50M_VGA,
--- 								VGA_HSYNC => VGA_HSYNC_int,
--- 								VGA_VSYNC => VGA_VSYNC_int,
--- 								VGA_VIDEO => VGA_VIDEO
--- 							);
+								COL_VADDR => VGA_VADDR,
+								COL_HADDR => VGA_HADDR,
+								COL_CLK => VGA_CLK25M,
+																
+								CLK_50M => CLK_12M288B,
+								VGA_HSYNC => VGA_HSYNC_int,
+								VGA_VSYNC => VGA_VSYNC_int,
+								VGA_VIDEO => VGA_VIDEO
+							);
 	
 	VGA_R_int <= VGA_VIDEO and not(port_FFFF(2)) when port_FFFE = '0' else
 				VGA_VIDEO and not(COLORS(2));

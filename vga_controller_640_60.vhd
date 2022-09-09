@@ -92,15 +92,19 @@ architecture Behavioral of vga_controller_640_60 is
 ------------------------------------------------------------------------
 
 -- maximum value for the horizontal pixel counter
-constant HMAX  : std_logic_vector(10 downto 0) := "01100100000"; -- 800
+-- constant HMAX  : std_logic_vector(10 downto 0) := "01100100000"; -- 800
+constant HMAX  : std_logic_vector(10 downto 0) := "00110001001"; -- 393
 -- maximum value for the vertical pixel counter
 constant VMAX  : std_logic_vector(10 downto 0) := "01000001101"; -- 525
 -- total number of visible columns
-constant HLINES: std_logic_vector(10 downto 0) := "01010000000"; -- 640
+-- constant HLINES: std_logic_vector(10 downto 0) := "01010000000"; -- 640
+constant HLINES: std_logic_vector(10 downto 0) := "00100000010"; -- 258
 -- value for the horizontal counter where front porch ends
-constant HFP   : std_logic_vector(10 downto 0) := "01010001000"; -- 648
+-- constant HFP   : std_logic_vector(10 downto 0) := "01010001000"; -- 648
+constant HFP   : std_logic_vector(10 downto 0) := "00100111111"; -- 319
 -- value for the horizontal counter where the synch pulse ends
-constant HSP   : std_logic_vector(10 downto 0) := "01011101000"; -- 744
+-- constant HSP   : std_logic_vector(10 downto 0) := "01011101000"; -- 744
+constant HSP   : std_logic_vector(10 downto 0) := "00101101110"; -- 366
 -- total number of visible lines
 constant VLINES: std_logic_vector(10 downto 0) := "00111100000"; -- 480
 -- value for the vertical counter where the front porch ends

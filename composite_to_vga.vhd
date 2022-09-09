@@ -16,18 +16,18 @@ entity composite_to_vga is
 				START_FRAME_n : in  STD_LOGIC;	-- Should be connected to WAIT_n signal
 				HPOS : in STD_LOGIC;	-- Horizontal position indicator 2BA8: '1' when horizontal position = 11 else '0'
 			  
-				ESC_STATE : in STD_LOGIC;	-- State of the ESC key - signals if Galaksija or Picoblaze are in charge
-				CLK_W2 : in STD_LOGIC;		-- Clock for second VRAM port
-				WR2 : in STD_LOGIC;			-- Write signal for second VRAM port
-				AWR2 : in STD_LOGIC_VECTOR(15 downto 0);	-- Address for second VRAM port
-				DIN2 : in STD_LOGIC;	-- Data fro second VRAM port
+-- 				ESC_STATE : in STD_LOGIC;	-- State of the ESC key - signals if Galaksija or Picoblaze are in charge
+-- 				CLK_W2 : in STD_LOGIC;		-- Clock for second VRAM port
+-- 				WR2 : in STD_LOGIC;			-- Write signal for second VRAM port
+-- 				AWR2 : in STD_LOGIC_VECTOR(15 downto 0);	-- Address for second VRAM port
+-- 				DIN2 : in STD_LOGIC;	-- Data fro second VRAM port
 			  
 				COL_VADDR : out STD_LOGIC_VECTOR(5 downto 0);	-- Vertical address for color RAM, in sync with VGA data
 				COL_HADDR : out STD_LOGIC_VECTOR(5 downto 0);	-- Horizontal address for color RAM, in sync
 				COL_CLK : out STD_LOGIC;	-- Clock for color RAM
 			  
 			  -- VGA controller signals
-				CLK_50M	: in std_logic;
+				CLK_50M	: in std_logic; -- actually 12.288
 				VGA_HSYNC : inout std_logic;
 				VGA_VSYNC : inout std_logic;
 				VGA_VIDEO : out std_logic
@@ -314,20 +314,24 @@ begin
 						DOUT => VGA_VIDEO_int
 					);
 
-	WR1 <= WR when ESC_STATE = '0' else
-          WR2;
+-- 	WR1 <= WR when ESC_STATE = '0' else
+--           WR2;
+	WR1 <= WR;
 	
-	ADDR2 <= '0' & AWR2;
+-- 	ADDR2 <= '0' & AWR2;
 
 
-	CLKW <= CLK when ESC_STATE = '0' else
-	        CLK_W2;
+  CLKW <= CLK;
+-- 	CLKW <= CLK when ESC_STATE = '0' else
+-- 	        CLK_W2;
 
-	AWR <= ADDR when ESC_STATE = '0' else
-			 ADDR2;
+	AWR <= ADDR;
+-- 	AWR <= ADDR when ESC_STATE = '0' else
+-- 			 ADDR2;
 
-	DIN <= VIDEO_DATA when ESC_STATE = '0' else
-			 DIN2;
+-- 	DIN <= VIDEO_DATA when ESC_STATE = '0' else
+-- 			 DIN2;
+	DIN <= VIDEO_DATA;
 				
 	-- Color RAM addresses
 	COL_VADDR <= vaddr2;
@@ -382,12 +386,13 @@ begin
 	VGA_VIDEO <= VGA_VIDEO_int when (BLANK = '0') else
 					 '0';
 	
-	process(CLK_50M, CLK_25M)
-	begin
-		if (CLK_50M'event) and (CLK_50M = '1') then
-			CLK_25M <= not CLK_25M;
-		end if;
-	end process;
+-- 	process(CLK_50M, CLK_25M)
+-- 	begin
+-- 		if (CLK_50M'event) and (CLK_50M = '1') then
+-- 			CLK_25M <= not CLK_25M;
+-- 		end if;
+-- 	end process;
+  CLK_25M <= CLK_50M; -- actually 12.288
 	
 	COL_CLK <= CLK_25M;
 

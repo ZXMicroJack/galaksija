@@ -306,7 +306,7 @@ begin
 					)
 		 Port map ( 
 						CLKW => CLKW,
-						CLKR => VGA_CLK,
+						CLKR => not VGA_CLK,
 						WR => WR1,
 						ARD => VGA_ADDR,
 						AWR => AWR,
@@ -335,7 +335,7 @@ begin
 				
 	-- Color RAM addresses
 	COL_VADDR <= vaddr2;
-	COL_HADDR <= HADDR(8 downto 3);
+	COL_HADDR <= HADDR(7 downto 2);
 
 	-- "Dot" heights are not equal in pixels
 	-- Heights are : 3(+1) 4(+1) 3(+1) 3(+1) 4(+1) 3(+1) 3(+1) 4(+1) ...
@@ -369,7 +369,7 @@ begin
 	end process;
 
 	VGA_CLK <= CLK_25M;
-	VGA_ADDR <= VADDR(9 downto 1) & HADDR(8 downto 1);
+	VGA_ADDR <= VADDR(9 downto 1) & HADDR(7 downto 0);
 
 	XS <= conv_std_logic_vector(2*XRES-1, 10);
 	YS <= conv_std_logic_vector(YMAX, 10);
@@ -383,8 +383,7 @@ begin
 	
 	BLANK <= BLANK_int or VGA_BLANK;
 	
-	VGA_VIDEO <= VGA_VIDEO_int when (BLANK = '0') else
-					 '0';
+	VGA_VIDEO <= VGA_VIDEO_int when (BLANK = '0') and (HADDR(10 downto 8) = "000") else '0';
 	
 -- 	process(CLK_50M, CLK_25M)
 -- 	begin

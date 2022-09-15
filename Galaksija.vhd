@@ -102,6 +102,7 @@ architecture rtl of Galaksija is
 	-- 
 
 	signal PDIV : std_logic_vector(3 downto 0) := "0000";
+	signal PDIV2 : std_logic_vector(11 downto 0) := X"000";
 	signal PDIV_RST : std_logic;
 	signal PIX_CLK_COUNTER : std_logic_vector(2 downto 0) := "000";
 	signal PIX_CLK : std_logic;	-- Pixel clock, should be 6.144 MHz
@@ -293,7 +294,8 @@ architecture rtl of Galaksija is
 				  CLK_50M	: in std_logic;
 				  VGA_HSYNC : inout std_logic;
 				  VGA_VSYNC : inout std_logic;
-				  VGA_VIDEO : out std_logic
+				  VGA_VIDEO : out std_logic;
+				  VGA_MODE : in std_logic
 				 );
 	end component composite_to_vga;
 
@@ -612,13 +614,13 @@ tristategenerate: for i in 0 to 7 generate
   KEYB_CLK        <= PIX_CLK_COUNTER(0);      -- 6,25 MHz
 	
 	--
-	-- Pixel clock divider
-	--
+	-- Pixel clock divider at 6.144MHz
+	-- Reset at PDIV(3 downto 2) = "11" -> 512kHz
 		
 	process(PIX_CLK, PDIV_RST, PDIV)
 	begin
 		if (PIX_CLK'event) and (PIX_CLK='0') then
-			if (PDIV = "1011") then
+			if (PDIV(3 downto 0) = "1011") then
 				PDIV <= "0000";
 			else
 				PDIV <= PDIV + 1;
@@ -652,6 +654,7 @@ tristategenerate: for i in 0 to 7 generate
 	-- HSYNC MMV C3 = 5 nF R12 = 390 T=1.95 us => 98 cycles @ 50 MHz
 	HSYNC_MMV: MMV
 	generic map ( Period => 6)
+-- 	generic map ( Period => 5)
 	port map(
 					TRIG => HSYNC,
 					CLK => PIX_CLK,
@@ -663,6 +666,7 @@ tristategenerate: for i in 0 to 7 generate
 	-- VSYNC MMV C4 = 100 nF R13 = 27 K, T = 2.7 mS => 135000 cycles @ 50 MHz
 	VSYNC_MMV: MMV
 	generic map (Period => 8437)
+-- 	generic map (Period => 7273)
 	port map(
 					TRIG => VSYNC,
 					CLK => PIX_CLK,
@@ -968,17 +972,24 @@ tristategenerate: for i in 0 to 7 generate
 	--
 	--
 
-       VGA_RGB_SWITCH : process(VGA_MODE, VIDEO_toggle) begin
-    if (VIDEO_toggle'event) and (VIDEO_toggle = '1') then
-      VGA_MODE <= not VGA_MODE;
-    end if;
-       end process;
+      VGA_RGB_SWITCH : process(VGA_MODE, VIDEO_toggle) begin
+        if (VIDEO_toggle'event) and (VIDEO_toggle = '1') then
+          VGA_MODE <= not VGA_MODE;
+        end if;
+      end process;
        
-       VGA_R <= VGA_R_int when VGA_MODE = '1' else VIDEO_DATA;
-       VGA_G <= VGA_G_int when VGA_MODE = '1' else VIDEO_DATA;
-       VGA_B <= VGA_B_int when VGA_MODE = '1' else VIDEO_DATA;
-       VGA_HSYNC <= VGA_HSYNC_int when VGA_MODE = '1' else VIDEO_SYNC;
-       VGA_VSYNC <= VGA_VSYNC_int when VGA_MODE = '1' else '1';
+--       VGA_R <= VGA_R_int when VGA_MODE = '1' else VIDEO_DATA;
+--       VGA_G <= VGA_G_int when VGA_MODE = '1' else VIDEO_DATA;
+--       VGA_B <= VGA_B_int when VGA_MODE = '1' else VIDEO_DATA;
+--       VGA_HSYNC <= VGA_HSYNC_int when VGA_MODE = '1' else VIDEO_SYNC;
+--       VGA_VSYNC <= VGA_VSYNC_int when VGA_MODE = '1' else '1';
+      VGA_R <= VGA_R_int;
+      VGA_G <= VGA_G_int;
+      VGA_B <= VGA_B_int;
+      VGA_HSYNC <= VGA_HSYNC_int when VGA_MODE = '1' else (VGA_HSYNC_int and VGA_VSYNC_int);
+      VGA_VSYNC <= VGA_VSYNC_int when VGA_MODE = '1' else '1';
+--       VGA_HSYNC <= VGA_HSYNC_int;
+--       VGA_VSYNC <= VGA_VSYNC_int;
 	
 	VGAOUT: composite_to_vga
 				port map(
@@ -989,12 +1000,6 @@ tristategenerate: for i in 0 to 7 generate
 								START_FRAME_n => WAIT_n_VGA,
 								HPOS => HPOS_VGA,
 								
--- 								ESC_STATE => ESC_STATE,
--- 								CLK_W2 => CLK_50M_VGA,
--- 								WR2 => PBLAZE_VWR_VGA,
--- 								AWR2 => PBLAZE_VADDR_VGA,
--- 								DIN2 => PBLAZE_VDATA_VGA,
--- 
 								COL_VADDR => VGA_VADDR,
 								COL_HADDR => VGA_HADDR,
 								COL_CLK => VGA_CLK25M,
@@ -1002,7 +1007,8 @@ tristategenerate: for i in 0 to 7 generate
 								CLK_50M => CLK_12M288B,
 								VGA_HSYNC => VGA_HSYNC_int,
 								VGA_VSYNC => VGA_VSYNC_int,
-								VGA_VIDEO => VGA_VIDEO
+								VGA_VIDEO => VGA_VIDEO,
+								VGA_MODE => VGA_MODE
 							);
 	
 	VGA_R_int <= VGA_VIDEO and not(port_FFFF(2)) when port_FFFE = '0' else

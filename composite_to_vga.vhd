@@ -16,12 +16,6 @@ entity composite_to_vga is
 				START_FRAME_n : in  STD_LOGIC;	-- Should be connected to WAIT_n signal
 				HPOS : in STD_LOGIC;	-- Horizontal position indicator 2BA8: '1' when horizontal position = 11 else '0'
 			  
--- 				ESC_STATE : in STD_LOGIC;	-- State of the ESC key - signals if Galaksija or Picoblaze are in charge
--- 				CLK_W2 : in STD_LOGIC;		-- Clock for second VRAM port
--- 				WR2 : in STD_LOGIC;			-- Write signal for second VRAM port
--- 				AWR2 : in STD_LOGIC_VECTOR(15 downto 0);	-- Address for second VRAM port
--- 				DIN2 : in STD_LOGIC;	-- Data fro second VRAM port
-			  
 				COL_VADDR : out STD_LOGIC_VECTOR(5 downto 0);	-- Vertical address for color RAM, in sync with VGA data
 				COL_HADDR : out STD_LOGIC_VECTOR(5 downto 0);	-- Horizontal address for color RAM, in sync
 				COL_CLK : out STD_LOGIC;	-- Clock for color RAM
@@ -30,7 +24,8 @@ entity composite_to_vga is
 				CLK_50M	: in std_logic; -- actually 12.288
 				VGA_HSYNC : inout std_logic;
 				VGA_VSYNC : inout std_logic;
-				VGA_VIDEO : out std_logic
+				VGA_VIDEO : out std_logic;
+        VGA_MODE : in std_logic
 			 );
 end composite_to_vga;
 
@@ -97,8 +92,23 @@ architecture rtl of composite_to_vga is
 
 	signal HADDR : std_logic_vector(10 downto 0);
 	signal VADDR : std_logic_vector(10 downto 0);
+
+	signal HADDR_VGA : std_logic_vector(10 downto 0);
+	signal VADDR_VGA : std_logic_vector(10 downto 0);
+
+  signal HADDR_PAL : std_logic_vector(10 downto 0);
+	signal VADDR_PAL : std_logic_vector(10 downto 0);
+
+  signal VGA_HSYNC_PAL : std_logic;
+  signal VGA_VSYNC_PAL : std_logic;
+	
+  signal VGA_HSYNC_VGA : std_logic;
+  signal VGA_VSYNC_VGA : std_logic;
+	
 	signal VGA_VIDEO_int : std_logic;
 	signal VGA_BLANK : std_logic;	
+	signal VGA_BLANK_VGA : std_logic;	
+	signal VGA_BLANK_PAL : std_logic;	
 	signal BLANK_int : std_logic;
 
 	signal XOVER, YOVER : std_logic;
@@ -146,11 +156,29 @@ architecture rtl of composite_to_vga is
 			);
 	end component vga_controller_640_60;
 	
+	component composite_controller_pal is
+		Port(
+					rst : in std_logic;
+					pixel_clk : in std_logic;
+					HS	: out std_logic;
+					VS	: out std_logic;
+					hcount : out std_logic_vector(10 downto 0);
+					vcount : out std_logic_vector(10 downto 0);
+					blank: out std_logic
+			);
+	end component composite_controller_pal;
+
 	--
 	-- End of components
 	--
 	
 begin
+  HADDR <= HADDR_VGA when VGA_MODE = '1' else HADDR_PAL;
+  VADDR <= VADDR_VGA when VGA_MODE = '1' else VADDR_PAL;
+  VGA_HSYNC <= VGA_HSYNC_VGA when VGA_MODE = '1' else VGA_HSYNC_PAL;
+  VGA_VSYNC <= VGA_VSYNC_VGA when VGA_MODE = '1' else VGA_VSYNC_PAL;
+  VGA_BLANK <= VGA_BLANK_VGA when VGA_MODE = '1' else VGA_BLANK_PAL;
+
 	NPIX <= NPIX1 when HPOS = '1' else
 			  NPIX2;
 
@@ -400,11 +428,23 @@ begin
 		rst => RESET,
 		pixel_clk => CLK_25M,
 
-		HS => VGA_HSYNC,
-		VS => VGA_VSYNC,
-		hcount => HADDR,
-		vcount => VADDR,
-		blank => VGA_BLANK
+		HS => VGA_HSYNC_VGA,
+		VS => VGA_VSYNC_VGA,
+		hcount => HADDR_VGA,
+		vcount => VADDR_VGA,
+		blank => VGA_BLANK_VGA
+	);
+
+	PAL_CTRL: composite_controller_pal
+	port map(
+		rst => RESET,
+		pixel_clk => CLK_25M,
+
+		HS => VGA_HSYNC_PAL,
+		VS => VGA_VSYNC_PAL,
+		hcount => HADDR_PAL,
+		vcount => VADDR_PAL,
+		blank => VGA_BLANK_PAL
 	);
 	
 end rtl;

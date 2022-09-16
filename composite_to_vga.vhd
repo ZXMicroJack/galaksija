@@ -173,7 +173,7 @@ architecture rtl of composite_to_vga is
 	--
 	
 begin
-  HADDR <= HADDR_VGA when VGA_MODE = '1' else HADDR_PAL;
+  HADDR <= HADDR_VGA when VGA_MODE = '1' else ("00" & HADDR_PAL(10 downto 2));
   VADDR <= VADDR_VGA when VGA_MODE = '1' else VADDR_PAL;
   VGA_HSYNC <= VGA_HSYNC_VGA when VGA_MODE = '1' else VGA_HSYNC_PAL;
   VGA_VSYNC <= VGA_VSYNC_VGA when VGA_MODE = '1' else VGA_VSYNC_PAL;

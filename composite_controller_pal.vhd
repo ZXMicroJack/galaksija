@@ -93,7 +93,7 @@ architecture Behavioral of composite_controller_pal is
 
 -- maximum value for the horizontal pixel counter
 -- constant HMAX  : std_logic_vector(10 downto 0) := "01100100000"; -- 800
-constant HMAX  : std_logic_vector(10 downto 0) := "01100010010"; -- 393
+constant HMAX  : std_logic_vector(10 downto 0) := "01100010001"; -- 393
 -- maximum value for the vertical pixel counter
 constant VMAX  : std_logic_vector(10 downto 0) := "00100111000"; -- 525
 -- total number of visible columns
@@ -102,16 +102,16 @@ constant HLINES: std_logic_vector(10 downto 0) := "00100100001"; -- 258
 -- value for the horizontal counter where front porch ends
 -- constant HFP   : std_logic_vector(10 downto 0) := "01010001000"; -- 648
 -- constant HFP   : std_logic_vector(10 downto 0) := "00100101101"; -- 319
-constant HFP   : std_logic_vector(10 downto 0) := "01010110000";
+constant HFP   : std_logic_vector(10 downto 0) := "01010100100";
 -- value for the horizontal counter where the synch pulse ends
 -- constant HSP   : std_logic_vector(10 downto 0) := "01011101000"; -- 744
 constant HSP   : std_logic_vector(10 downto 0) := "01011010100"; -- 366
 -- total number of visible lines
 constant VLINES: std_logic_vector(10 downto 0) := "00111100000"; -- 480
 -- value for the vertical counter where the front porch ends
-constant VFP   : std_logic_vector(10 downto 0) := "00100110100"; -- 482
+constant VFP   : std_logic_vector(10 downto 0) := "00100110101"; -- 482
 -- value for the vertical counter where the synch pulse ends
-constant VSP   : std_logic_vector(10 downto 0) := "00100110111"; -- 484
+constant VSP   : std_logic_vector(10 downto 0) := "00101100101"; -- 484
 -- polarity of the horizontal and vertical synch pulse
 -- only one polarity used, because for this resolution they coincide.
 constant SPP   : std_logic := '0';

@@ -38,9 +38,9 @@ entity Galaksija is
 				
 				VGA_HSYNC 	: inout STD_LOGIC;
 				VGA_VSYNC 	: inout STD_LOGIC;
-				VGA_R		 	: out STD_LOGIC;
-				VGA_G		 	: out STD_LOGIC;
-				VGA_B		 	: out STD_LOGIC
+				VGA_R : out STD_LOGIC_VECTOR(2 downto 0);
+				VGA_G : out STD_LOGIC_VECTOR(2 downto 0);
+				VGA_B : out STD_LOGIC_VECTOR(2 downto 0)
 				
 			);
 end Galaksija;
@@ -983,10 +983,10 @@ tristategenerate: for i in 0 to 7 generate
 --       VGA_B <= VGA_B_int when VGA_MODE = '1' else VIDEO_DATA;
 --       VGA_HSYNC <= VGA_HSYNC_int when VGA_MODE = '1' else VIDEO_SYNC;
 --       VGA_VSYNC <= VGA_VSYNC_int when VGA_MODE = '1' else '1';
-      VGA_R <= VGA_R_int;
-      VGA_G <= VGA_G_int;
-      VGA_B <= VGA_B_int;
-      VGA_HSYNC <= VGA_HSYNC_int when VGA_MODE = '1' else (VGA_HSYNC_int and VGA_VSYNC_int);
+      VGA_R <= VGA_R_int&VGA_R_int&VGA_R_int;
+      VGA_G <= VGA_G_int&VGA_G_int&VGA_G_int;
+      VGA_B <= VGA_B_int&VGA_B_int&VGA_B_int;
+      VGA_HSYNC <= VGA_HSYNC_int when VGA_MODE = '1' else (VGA_HSYNC_int xor (not VGA_VSYNC_int));
       VGA_VSYNC <= VGA_VSYNC_int when VGA_MODE = '1' else '1';
 --       VGA_HSYNC <= VGA_HSYNC_int;
 --       VGA_VSYNC <= VGA_VSYNC_int;

@@ -40,7 +40,10 @@ entity Galaksija is
 				VGA_VSYNC 	: inout STD_LOGIC;
 				VGA_R : out STD_LOGIC_VECTOR(2 downto 0);
 				VGA_G : out STD_LOGIC_VECTOR(2 downto 0);
-				VGA_B : out STD_LOGIC_VECTOR(2 downto 0)
+				VGA_B : out STD_LOGIC_VECTOR(2 downto 0);
+				
+				STDN : out std_logic;
+				STDNB : out std_logic
 				
 			);
 end Galaksija;
@@ -455,6 +458,8 @@ begin
 	WRnext <= WR_n;
 	IORQnext <= IORQ_n;
 	M1next <= M1_n;
+	STDN <= '0';
+	STDNB <= '1';
 	
 	-- Output buffer
 

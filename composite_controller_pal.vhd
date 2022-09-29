@@ -98,7 +98,7 @@ constant HMAX  : std_logic_vector(10 downto 0) := "01100010001"; -- 393
 constant VMAX  : std_logic_vector(10 downto 0) := "00100111000"; -- 525
 -- total number of visible columns
 -- constant HLINES: std_logic_vector(10 downto 0) := "01010000000"; -- 640
-constant HLINES: std_logic_vector(10 downto 0) := "00100100001"; -- 258
+constant HLINES: std_logic_vector(10 downto 0) := "01001010010"; -- 258
 -- value for the horizontal counter where front porch ends
 -- constant HFP   : std_logic_vector(10 downto 0) := "01010001000"; -- 648
 -- constant HFP   : std_logic_vector(10 downto 0) := "00100101101"; -- 319
@@ -124,14 +124,17 @@ constant SPP   : std_logic := '0';
 signal hcounter : std_logic_vector(10 downto 0) := (others => '0');
 signal vcounter : std_logic_vector(10 downto 0) := (others => '0');
 
+signal hcountervisible : std_logic_vector(10 downto 0) := (others => '0');
+signal vcountervisible : std_logic_vector(10 downto 0) := (others => '0');
+
 -- active when inside visible screen area.
 signal video_enable: std_logic;
 
 begin
 
    -- output horizontal and vertical counters
-   hcount <= hcounter;
-   vcount <= vcounter;
+   hcount <= hcountervisible;
+   vcount <= vcountervisible;
 
    -- blank is active when outside screen visible area
    -- color output should be blacked (put on 0) when blank in active
@@ -146,10 +149,15 @@ begin
       if(rising_edge(pixel_clk)) then
          if(rst = '1') then
             hcounter <= (others => '0');
+            hcountervisible <= (others => '0');
          elsif(hcounter = HMAX) then
             hcounter <= (others => '0');
+            hcountervisible <= (others => '0');
          else
             hcounter <= hcounter + 1;
+            if (hcounter > 64) then
+              hcountervisible <= hcountervisible + 2;
+            end if;
          end if;
       end if;
    end process h_count;
@@ -162,11 +170,16 @@ begin
       if(rising_edge(pixel_clk)) then
          if(rst = '1') then
             vcounter <= (others => '0');
+            vcountervisible <= (others => '0');
          elsif(hcounter = HMAX) then
             if(vcounter = VMAX) then
                vcounter <= (others => '0');
+               vcountervisible <= (others => '0');
             else
                vcounter <= vcounter + 1;
+              if (vcounter > 56) then
+                vcountervisible <= vcountervisible + 2;
+              end if;
             end if;
          end if;
       end if;

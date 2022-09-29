@@ -411,7 +411,8 @@ begin
 	
 	BLANK <= BLANK_int or VGA_BLANK;
 	
-	VGA_VIDEO <= VGA_VIDEO_int when (BLANK = '0') and (HADDR(10 downto 8) = "000") else '0';
+-- 	VGA_VIDEO <= VGA_VIDEO_int when (BLANK = '0') and (HADDR(10 downto 8) = "000") else '0';
+	VGA_VIDEO <= VGA_VIDEO_int when (VGA_BLANK = '0') and (HADDR(10 downto 8) = "000") else '0';
 	
 -- 	process(CLK_50M, CLK_25M)
 -- 	begin

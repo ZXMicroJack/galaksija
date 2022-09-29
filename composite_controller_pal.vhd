@@ -98,7 +98,7 @@ constant HMAX  : std_logic_vector(10 downto 0) := "01100010001"; -- 393
 constant VMAX  : std_logic_vector(10 downto 0) := "00100111000"; -- 525
 -- total number of visible columns
 -- constant HLINES: std_logic_vector(10 downto 0) := "01010000000"; -- 640
-constant HLINES: std_logic_vector(10 downto 0) := "01001010010"; -- 258
+constant HLINES: std_logic_vector(10 downto 0) := "01000111110"; -- 258
 -- value for the horizontal counter where front porch ends
 -- constant HFP   : std_logic_vector(10 downto 0) := "01010001000"; -- 648
 -- constant HFP   : std_logic_vector(10 downto 0) := "00100101101"; -- 319

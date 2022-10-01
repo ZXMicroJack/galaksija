@@ -85,6 +85,9 @@ architecture rtl of Galaksija is
 	signal HSYNC : std_logic;
 	signal VSYNC : std_logic;
 	signal VIDEO_INT : std_logic;
+	signal RI : std_logic_vector(2 downto 0);
+	signal GI : std_logic_vector(2 downto 0);
+	signal BI : std_logic_vector(2 downto 0);
 
 	signal HSYNC_Q, HSYNC_Q_n : std_logic;
 	signal VSYNC_Q, VSYNC_Q_n : std_logic;
@@ -988,11 +991,57 @@ tristategenerate: for i in 0 to 7 generate
 --       VGA_B <= VGA_B_int when VGA_MODE = '1' else VIDEO_DATA;
 --       VGA_HSYNC <= VGA_HSYNC_int when VGA_MODE = '1' else VIDEO_SYNC;
 --       VGA_VSYNC <= VGA_VSYNC_int when VGA_MODE = '1' else '1';
-      VGA_R <= VGA_R_int&VGA_R_int&VGA_R_int;
-      VGA_G <= VGA_G_int&VGA_G_int&VGA_G_int;
-      VGA_B <= VGA_B_int&VGA_B_int&VGA_B_int;
-      VGA_HSYNC <= VGA_HSYNC_int when VGA_MODE = '1' else (VGA_HSYNC_int xor (not VGA_VSYNC_int));
-      VGA_VSYNC <= VGA_VSYNC_int when VGA_MODE = '1' else '1';
+
+--       VGA_R <= VGA_R_int&VGA_R_int&VGA_R_int;
+--       VGA_G <= VGA_G_int&VGA_G_int&VGA_G_int;
+--       VGA_B <= VGA_B_int&VGA_B_int&VGA_B_int;
+--       VGA_HSYNC <= VGA_HSYNC_int when VGA_MODE = '1' else (VGA_HSYNC_int xor (not VGA_VSYNC_int));
+--       VGA_VSYNC <= VGA_VSYNC_int when VGA_MODE = '1' else '1';
+
+      RI <= VGA_R_int&VGA_R_int&VGA_R_int;
+      GI <= VGA_G_int&VGA_G_int&VGA_G_int;
+      BI <= VGA_B_int&VGA_B_int&VGA_B_int;
+      
+
+      VGA_SCANDOUBLER : entity work.vga_scandoubler
+        port map(
+          clkvideo => PIX_CLK_COUNTER(0),
+          clkvga => CLK_12M288,
+          enable_scandoubling => VGA_MODE,
+          disable_scaneffect => '1',
+          ri => RI,
+          gi => GI,
+          bi => BI,
+          hsync_ext_n => VGA_HSYNC_int,
+          vsync_ext_n => VGA_VSYNC_int,
+          csync_ext_n => VGA_HSYNC_int xor (not VGA_VSYNC_int),
+          ro => VGA_R,
+          go => VGA_G,
+          bo => VGA_B,
+          hsync => VGA_HSYNC,
+          vsync => VGA_VSYNC
+        );
+-- module vga_scandoubler (
+-- 	input wire clkvideo,
+-- 	input wire clkvga,
+--   input wire enable_scandoubling,
+--   input wire disable_scaneffect,  // 1 to disable scanlines
+-- 	input wire [2:0] ri,
+-- 	input wire [2:0] gi,
+-- 	input wire [2:0] bi,
+-- 	input wire hsync_ext_n,
+-- 	input wire vsync_ext_n,
+--   input wire csync_ext_n,
+-- 	output reg [2:0] ro,
+-- 	output reg [2:0] go,
+-- 	output reg [2:0] bo,
+-- 	output reg hsync,
+-- 	output reg vsync
+--   );
+
+      
+      
+      
 --       VGA_HSYNC <= VGA_HSYNC_int;
 --       VGA_VSYNC <= VGA_VSYNC_int;
 	
@@ -1013,7 +1062,7 @@ tristategenerate: for i in 0 to 7 generate
 								VGA_HSYNC => VGA_HSYNC_int,
 								VGA_VSYNC => VGA_VSYNC_int,
 								VGA_VIDEO => VGA_VIDEO,
-								VGA_MODE => VGA_MODE
+								VGA_MODE => '0'
 							);
 	
 	VGA_R_int <= VGA_VIDEO and not(port_FFFF(2)) when port_FFFE = '0' else

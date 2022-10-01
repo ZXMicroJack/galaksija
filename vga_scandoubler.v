@@ -32,7 +32,8 @@ module vga_scandoubler (
 	output reg vsync
   );
 	
-	parameter [31:0] CLKVIDEO = 12000;
+// 	parameter [31:0] CLKVIDEO = 12000;
+  parameter [31:0] CLKVIDEO = 12288;
 	
 	// http://www.epanorama.net/faq/vga2rgb/calc.html
 	// SVGA 800x600

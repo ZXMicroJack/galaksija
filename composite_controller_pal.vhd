@@ -81,7 +81,8 @@ port(
    VS          : out std_logic;
    hcount      : out std_logic_vector(10 downto 0);
    vcount      : out std_logic_vector(10 downto 0);
-   blank       : out std_logic
+   blank       : out std_logic;
+   frame_sync  : in std_logic
 );
 end composite_controller_pal;
 
@@ -147,7 +148,7 @@ begin
    h_count: process(pixel_clk)
    begin
       if(rising_edge(pixel_clk)) then
-         if(rst = '1') then
+         if(rst = '1' or frame_sync = '1') then
             hcounter <= (others => '0');
             hcountervisible <= (others => '0');
          elsif(hcounter = HMAX) then
@@ -168,7 +169,7 @@ begin
    v_count: process(pixel_clk)
    begin
       if(rising_edge(pixel_clk)) then
-         if(rst = '1') then
+         if(rst = '1' or frame_sync = '1') then
             vcounter <= (others => '0');
             vcountervisible <= (others => '0');
          elsif(hcounter = HMAX) then

@@ -81,7 +81,8 @@ port(
    VS          : out std_logic;
    hcount      : out std_logic_vector(10 downto 0);
    vcount      : out std_logic_vector(10 downto 0);
-   blank       : out std_logic
+   blank       : out std_logic;
+   frame_sync  : in std_logic
 );
 end vga_controller_640_60;
 
@@ -96,6 +97,8 @@ architecture Behavioral of vga_controller_640_60 is
 constant HMAX  : std_logic_vector(10 downto 0) := "00110001001"; -- 393
 -- maximum value for the vertical pixel counter
 constant VMAX  : std_logic_vector(10 downto 0) := "01001110001"; -- 525
+-- constant VMAX  : std_logic_vector(10 downto 0) := "01001101111"; -- 525
+
 -- total number of visible columns
 -- constant HLINES: std_logic_vector(10 downto 0) := "01010000000"; -- 640
 constant HLINES: std_logic_vector(10 downto 0) := "00011111110"; -- 258
@@ -144,6 +147,7 @@ begin
    begin
       if(rising_edge(pixel_clk)) then
          if(rst = '1') then
+--          if(rst = '1' or frame_sync = '1') then
             hcounter <= (others => '0');
          elsif(hcounter = HMAX) then
             hcounter <= (others => '0');
@@ -160,6 +164,7 @@ begin
    begin
       if(rising_edge(pixel_clk)) then
          if(rst = '1') then
+--          if(rst = '1' or frame_sync = '1') then
             vcounter <= (others => '0');
          elsif(hcounter = HMAX) then
             if(vcounter = VMAX) then

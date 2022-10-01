@@ -152,7 +152,8 @@ architecture rtl of composite_to_vga is
 					VS	: out std_logic;
 					hcount : out std_logic_vector(10 downto 0);
 					vcount : out std_logic_vector(10 downto 0);
-					blank: out std_logic
+					blank: out std_logic;
+					frame_sync : in std_logic
 			);
 	end component vga_controller_640_60;
 	
@@ -164,7 +165,8 @@ architecture rtl of composite_to_vga is
 					VS	: out std_logic;
 					hcount : out std_logic_vector(10 downto 0);
 					vcount : out std_logic_vector(10 downto 0);
-					blank: out std_logic
+					blank: out std_logic;
+					frame_sync : in std_logic
 			);
 	end component composite_controller_pal;
 
@@ -433,7 +435,8 @@ begin
 		VS => VGA_VSYNC_VGA,
 		hcount => HADDR_VGA,
 		vcount => VADDR_VGA,
-		blank => VGA_BLANK_VGA
+		blank => VGA_BLANK_VGA,
+		frame_sync => START_OF_FRAME
 	);
 
 	PAL_CTRL: composite_controller_pal
@@ -445,7 +448,8 @@ begin
 		VS => VGA_VSYNC_PAL,
 		hcount => HADDR_PAL,
 		vcount => VADDR_PAL,
-		blank => VGA_BLANK_PAL
+		blank => VGA_BLANK_PAL,
+		frame_sync => START_OF_FRAME
 	);
 	
 end rtl;

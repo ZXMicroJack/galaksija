@@ -95,6 +95,7 @@ architecture Behavioral of composite_controller_pal is
 -- maximum value for the horizontal pixel counter
 -- constant HMAX  : std_logic_vector(10 downto 0) := "01100100000"; -- 800
 constant HMAX  : std_logic_vector(10 downto 0) := "01100010001"; -- 393
+constant HMAX_1: std_logic_vector(10 downto 0) := "01100010000"; -- 393
 -- maximum value for the vertical pixel counter
 constant VMAX  : std_logic_vector(10 downto 0) := "00100111000"; -- 525
 -- total number of visible columns
@@ -107,6 +108,7 @@ constant HFP   : std_logic_vector(10 downto 0) := "01010100100";
 -- value for the horizontal counter where the synch pulse ends
 -- constant HSP   : std_logic_vector(10 downto 0) := "01011101000"; -- 744
 constant HSP   : std_logic_vector(10 downto 0) := "01011010100"; -- 366
+constant HSP_1 : std_logic_vector(10 downto 0) := "01011010011"; -- 366
 -- total number of visible lines
 constant VLINES: std_logic_vector(10 downto 0) := "00111100000"; -- 480
 -- value for the vertical counter where the front porch ends
@@ -116,6 +118,10 @@ constant VSP   : std_logic_vector(10 downto 0) := "00101100101"; -- 484
 -- polarity of the horizontal and vertical synch pulse
 -- only one polarity used, because for this resolution they coincide.
 constant SPP   : std_logic := '0';
+
+-- To get exact timing to galaksija, every 13 lines, 9 should be reduced by 1 clock,
+-- which will run 24 times each frame.
+
 
 ------------------------------------------------------------------------
 -- SIGNALS
@@ -128,6 +134,11 @@ signal vcounter : std_logic_vector(10 downto 0) := (others => '0');
 signal hcountervisible : std_logic_vector(10 downto 0) := (others => '0');
 signal vcountervisible : std_logic_vector(10 downto 0) := (others => '0');
 
+-- run down clocks to be closer to original hardware to make syncing easier
+signal linecounter : std_logic_vector(3 downto 0) := (others => '0');
+signal isshorterline : boolean;
+signal hmaxhit : boolean;
+
 -- active when inside visible screen area.
 signal video_enable: std_logic;
 
@@ -136,6 +147,8 @@ begin
    -- output horizontal and vertical counters
    hcount <= hcountervisible;
    vcount <= vcountervisible;
+   isshorterline <= linecounter = X"0" or linecounter = X"4" or linecounter = X"8" or linecounter = X"B";
+   hmaxhit <= hcounter = HMAX when isshorterline else hcounter = HMAX_1 ;
 
    -- blank is active when outside screen visible area
    -- color output should be blacked (put on 0) when blank in active
@@ -151,7 +164,8 @@ begin
          if(rst = '1' or frame_sync = '1') then
             hcounter <= (others => '0');
             hcountervisible <= (others => '0');
-         elsif(hcounter = HMAX) then
+--          elsif(hcounter = HMAX) then
+         elsif (hmaxhit) then
             hcounter <= (others => '0');
             hcountervisible <= (others => '0');
          else
@@ -172,12 +186,20 @@ begin
          if(rst = '1' or frame_sync = '1') then
             vcounter <= (others => '0');
             vcountervisible <= (others => '0');
-         elsif(hcounter = HMAX) then
+            linecounter <= (others => '0');
+--          elsif(hcounter = HMAX) then
+         elsif (hmaxhit) then
             if(vcounter = VMAX) then
                vcounter <= (others => '0');
                vcountervisible <= (others => '0');
+               linecounter <= (others => '0');
             else
                vcounter <= vcounter + 1;
+               if (linecounter = X"C") then
+                linecounter <= (others => '0');
+               else
+                linecounter <= linecounter + 1;
+               end if;
               if (vcounter > 56) then
                 vcountervisible <= vcountervisible + 2;
               end if;
@@ -193,7 +215,9 @@ begin
    do_hs: process(pixel_clk)
    begin
       if(rising_edge(pixel_clk)) then
-         if(hcounter >= HFP and hcounter < HSP) then
+         if (not isshorterline and hcounter >= HFP and hcounter < HSP) then
+            HS <= SPP;
+         elsif (isshorterline and hcounter >= HFP and hcounter < HSP_1) then
             HS <= SPP;
          else
             HS <= not SPP;

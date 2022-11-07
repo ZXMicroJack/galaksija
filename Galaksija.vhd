@@ -661,8 +661,8 @@ tristategenerate: for i in 0 to 7 generate
 	
 	-- HSYNC MMV C3 = 5 nF R12 = 390 T=1.95 us => 98 cycles @ 50 MHz
 	HSYNC_MMV: MMV
-	generic map ( Period => 6)
--- 	generic map ( Period => 5)
+-- 	generic map ( Period => 6)
+	generic map ( Period => 24)
 	port map(
 					TRIG => HSYNC,
 					CLK => PIX_CLK,
@@ -699,16 +699,21 @@ tristategenerate: for i in 0 to 7 generate
 		end if;
 	end process;
 
-	process(MREQ_n, CPU_CLK_n, RFSH, PIX_CLK, dRFSH)
-	begin
-			if ((RFSH = '0') and (PIX_CLK = '1')) or (dRFSH = '0') then
-					LOAD_SCAN_LINE_n_int <= '1';
-			else
-			if (CPU_CLK_n'event) and (CPU_CLK_n='1') then
-						LOAD_SCAN_LINE_n_int <= not MREQ_n;
-			end if;
-			end if;
-	end process;
+-- 	PIX_CLK_COUNTER(1)
+-- 	
+-- 	process(MREQ_n, CPU_CLK_n, RFSH, PIX_CLK, dRFSH)
+-- 	begin
+-- 			if ((RFSH = '0') and (PIX_CLK = '1')) or (dRFSH = '0') then
+-- 					LOAD_SCAN_LINE_n_int <= '1';
+-- 			else
+-- 			if (CPU_CLK_n'event) and (CPU_CLK_n='1') then
+-- 						LOAD_SCAN_LINE_n_int <= not MREQ_n;
+-- 			end if;
+-- 			end if;
+-- 	end process;
+  -- ll = MREQ and RFSH and PIX_CLK_COUNTER(1)
+--   LOAD_SCAN_LINE_n_int <= not (PIX_CLK_COUNTER(1) and (not MREQ_n) and RFSH);
+  LOAD_SCAN_LINE_n_int <= (PIX_CLK_COUNTER(1) and (not MREQ_n) and RFSH);
 
 	--
 	-- Address decoder
@@ -870,7 +875,11 @@ tristategenerate: for i in 0 to 7 generate
 	process(LATCH_CLK, LATCH_IN, dKR7)
 	begin
 		if (LATCH_CLK'event) and (LATCH_CLK = '1') then
-			if (KR(7) = '0') then
+      -- nor nWrite nMreq O7
+      -- O7 = 0 when A3..5 = '111'
+      -- /WR or /KR7 or /MREQ
+      -- TODO get this right
+			if (KR(7) = '0' and WR_n = '0' and MREQ_n = '0') then
 				LATCH_DATA <= LATCH_IN;
 			end if;
 		end if;
@@ -998,29 +1007,39 @@ tristategenerate: for i in 0 to 7 generate
 --       VGA_HSYNC <= VGA_HSYNC_int when VGA_MODE = '1' else (VGA_HSYNC_int xor (not VGA_VSYNC_int));
 --       VGA_VSYNC <= VGA_VSYNC_int when VGA_MODE = '1' else '1';
 
+
+      VGA_R <= VIDEO_DATA&VIDEO_DATA&VIDEO_DATA;
+      VGA_G <= VIDEO_DATA&VIDEO_DATA&VIDEO_DATA;
+      VGA_B <= VIDEO_DATA&VIDEO_DATA&VIDEO_DATA;
+      VGA_HSYNC <= VIDEO_SYNC;
+      VGA_VSYNC <= '1';
+--       VGA_HSYNC_int when VGA_MODE = '1' else (VGA_HSYNC_int xor (not VGA_VSYNC_int));
+--       VGA_VSYNC <= VGA_VSYNC_int when VGA_MODE = '1' else '1';
+
       RI <= VGA_R_int&VGA_R_int&VGA_R_int;
       GI <= VGA_G_int&VGA_G_int&VGA_G_int;
       BI <= VGA_B_int&VGA_B_int&VGA_B_int;
       
 
-      VGA_SCANDOUBLER : entity work.vga_scandoubler
-        port map(
-          clkvideo => PIX_CLK_COUNTER(0),
-          clkvga => CLK_12M288,
-          enable_scandoubling => VGA_MODE,
-          disable_scaneffect => '1',
-          ri => RI,
-          gi => GI,
-          bi => BI,
-          hsync_ext_n => VGA_HSYNC_int,
-          vsync_ext_n => VGA_VSYNC_int,
-          csync_ext_n => VGA_HSYNC_int xor (not VGA_VSYNC_int),
-          ro => VGA_R,
-          go => VGA_G,
-          bo => VGA_B,
-          hsync => VGA_HSYNC,
-          vsync => VGA_VSYNC
-        );
+--       VGA_SCANDOUBLER : entity work.vga_scandoubler
+--         port map(
+--           clkvideo => PIX_CLK_COUNTER(0),
+--           clkvga => CLK_12M288,
+--           enable_scandoubling => VGA_MODE,
+--           disable_scaneffect => '1',
+--           ri => RI,
+--           gi => GI,
+--           bi => BI,
+--           hsync_ext_n => VGA_HSYNC_int,
+--           vsync_ext_n => VGA_VSYNC_int,
+--           csync_ext_n => VGA_HSYNC_int xor (not VGA_VSYNC_int),
+--           ro => VGA_R,
+--           go => VGA_G,
+--           bo => VGA_B,
+--           hsync => VGA_HSYNC,
+--           vsync => VGA_VSYNC
+--         );
+
 -- module vga_scandoubler (
 -- 	input wire clkvideo,
 -- 	input wire clkvga,

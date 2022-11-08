@@ -97,7 +97,8 @@ architecture rtl of Galaksija is
 
 	signal LOAD_SCAN_LINE_n : std_logic;	
 	signal LOAD_SCAN_LINE_n_int : std_logic;	
-
+  signal LOAD_SCAN_LINE_n_prev : std_logic;
+	
 	signal dRFSH : std_logic;
 	--
 	-- End of Z80A signals
@@ -701,19 +702,21 @@ tristategenerate: for i in 0 to 7 generate
 
 -- 	PIX_CLK_COUNTER(1)
 -- 	
--- 	process(MREQ_n, CPU_CLK_n, RFSH, PIX_CLK, dRFSH)
--- 	begin
--- 			if ((RFSH = '0') and (PIX_CLK = '1')) or (dRFSH = '0') then
--- 					LOAD_SCAN_LINE_n_int <= '1';
--- 			else
--- 			if (CPU_CLK_n'event) and (CPU_CLK_n='1') then
--- 						LOAD_SCAN_LINE_n_int <= not MREQ_n;
--- 			end if;
--- 			end if;
--- 	end process;
+	process(MREQ_n, CPU_CLK_n, RFSH, PIX_CLK, dRFSH)
+	begin
+			if ((RFSH = '0') and (PIX_CLK = '1')) or (dRFSH = '0') then
+					LOAD_SCAN_LINE_n_int <= '1';
+			else
+			if (CPU_CLK_n'event) and (CPU_CLK_n='1') then
+						LOAD_SCAN_LINE_n_int <= not MREQ_n;
+			end if;
+			end if;
+	end process;
   -- ll = MREQ and RFSH and PIX_CLK_COUNTER(1)
 --   LOAD_SCAN_LINE_n_int <= not (PIX_CLK_COUNTER(1) and (not MREQ_n) and RFSH);
-  LOAD_SCAN_LINE_n_int <= (PIX_CLK_COUNTER(1) and (not MREQ_n) and RFSH);
+  -- TODO get this right
+--   LOAD_SCAN_LINE_n_int <= not (PIX_CLK_COUNTER(1) and (not MREQ_n) and RFSH);
+--   LOAD_SCAN_LINE_n_int <= (not MREQ_n) and (not RFSH_n);
 
 	--
 	-- Address decoder
@@ -722,9 +725,14 @@ tristategenerate: for i in 0 to 7 generate
 	DECODER_EN <= (not(MREQ_n) and not(A(14))) and not(A(15));
 	
 	-- Keyboard and latch address decoding
-	LATCH_KBD_CS_n <= '0' when ((A(11)='0') and (A(12)='0') and (A(13)='1') and (DECODER_EN = '1')) and (RFSH_n = '1')else
-							'1';
-							
+-- 	LATCH_KBD_CS_n <= '0' when 
+--     ((A(11)='0') and (A(12)='0') and (A(13)='1') and (DECODER_EN = '1')) and (RFSH_n = '1')
+--     else '1';
+	LATCH_KBD_CS_n <= '0' when 
+    ((A(11)='0') and (A(12)='0') and (A(13)='1') and (DECODER_EN = '1'))
+    else '1';
+
+    
 	ROM_OE_n <= '0' when ((A(13)='0') and (DECODER_EN='1') and (RFSH = '0')) else
 					'1';
 					
@@ -871,7 +879,10 @@ tristategenerate: for i in 0 to 7 generate
 	
 	LATCH_CLK <= PIX_CLK;
 	LATCH_IN <= D(7 downto 2);
+
 	
+	-- Loadscan_ne : nor(a,0,0), a : nor(nMREQ,nRFRSH,nCLK) 
+	-- to S/nC -> active low load parallel
 	process(LATCH_CLK, LATCH_IN, dKR7)
 	begin
 		if (LATCH_CLK'event) and (LATCH_CLK = '1') then
@@ -880,6 +891,7 @@ tristategenerate: for i in 0 to 7 generate
       -- /WR or /KR7 or /MREQ
       -- TODO get this right
 			if (KR(7) = '0' and WR_n = '0' and MREQ_n = '0') then
+-- 			if (MREQ_n = '0' and RFSH_n = '0') then
 				LATCH_DATA <= LATCH_IN;
 			end if;
 		end if;
@@ -919,13 +931,24 @@ tristategenerate: for i in 0 to 7 generate
 				);
 	
 	-- Video shift register
-	process(PIX_CLK, LOAD_SCAN_LINE_n, SHREG)
+-- 	process(PIX_CLK, LOAD_SCAN_LINE_n, SHREG)
+-- 	begin
+-- 		if (PIX_CLK'event) and (PIX_CLK = '1') then
+-- 			if (LOAD_SCAN_LINE_n = '0') then
+-- 				SHREG <= CHROM_D;
+-- 			else
+-- 				SHREG <= SHREG(6 downto 0) & '0';
+-- 			end if;
+-- 		end if;
+-- 	end process;
+  process(PIX_CLK, LOAD_SCAN_LINE_n, SHREG)
 	begin
 		if (PIX_CLK'event) and (PIX_CLK = '1') then
-			if (LOAD_SCAN_LINE_n = '0') then
+      LOAD_SCAN_LINE_n_prev <= LOAD_SCAN_LINE_n;
+			if (LOAD_SCAN_LINE_n_prev = '1' and LOAD_SCAN_LINE_n = '0') then
 				SHREG <= CHROM_D;
 			else
-				SHREG <= SHREG(6 downto 0) & '0';
+				SHREG <= SHREG(6 downto 0) & '1';
 			end if;
 		end if;
 	end process;

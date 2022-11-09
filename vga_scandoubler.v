@@ -47,14 +47,17 @@ module vga_scandoubler (
 	reg [9:0] totalhor = 10'd0;
 
 	wire [2:0] rout, gout, bout;
+	wire[10:0] addrvga_ram = addrvga[10:4] == 7'd0 ? 11'd0 : (addrvga[10:0] - 16);
+// 	wire[10:0] addrvga_ram = addrvga[10:7] == 4'd0 ? 10'd0 : {addrvga[10:8], ~addrvga[7], addrvga[6:0]}; 
 	// Memoria de doble puerto que guarda la información de dos scans
 	// Cada scan puede ser de hasta 1024 puntos, incluidos aquí los
 	// puntos en negro que se pintan durante el HBlank
 	vgascanline_dport memscan (
 		.clk(clkvga),
 		.addrwrite(addrvideo),
-		.addrread(addrvga),
-		.we(1'b1),
+// 		.addrread(addrvga),
+		.addrread(addrvga_ram),
+    .we(1'b1),
 		.din({ri,gi,bi}),
 		.dout({rout,gout,bout})
 	);

@@ -1031,17 +1031,41 @@ tristategenerate: for i in 0 to 7 generate
 --       VGA_VSYNC <= VGA_VSYNC_int when VGA_MODE = '1' else '1';
 
 
-      VGA_R <= VIDEO_DATA&VIDEO_DATA&VIDEO_DATA;
-      VGA_G <= VIDEO_DATA&VIDEO_DATA&VIDEO_DATA;
-      VGA_B <= VIDEO_DATA&VIDEO_DATA&VIDEO_DATA;
-      VGA_HSYNC <= VIDEO_SYNC;
-      VGA_VSYNC <= '1';
+      -- THIS WORKS
+--       VGA_R <= VIDEO_DATA&VIDEO_DATA&VIDEO_DATA;
+--       VGA_G <= VIDEO_DATA&VIDEO_DATA&VIDEO_DATA;
+--       VGA_B <= VIDEO_DATA&VIDEO_DATA&VIDEO_DATA;
+--       VGA_HSYNC <= VIDEO_SYNC;
+--       VGA_VSYNC <= '1';
+
 --       VGA_HSYNC_int when VGA_MODE = '1' else (VGA_HSYNC_int xor (not VGA_VSYNC_int));
 --       VGA_VSYNC <= VGA_VSYNC_int when VGA_MODE = '1' else '1';
 
-      RI <= VGA_R_int&VGA_R_int&VGA_R_int;
-      GI <= VGA_G_int&VGA_G_int&VGA_G_int;
-      BI <= VGA_B_int&VGA_B_int&VGA_B_int;
+--       RI <= VGA_R_int&VGA_R_int&VGA_R_int;
+--       GI <= VGA_G_int&VGA_G_int&VGA_G_int;
+--       BI <= VGA_B_int&VGA_B_int&VGA_B_int;
+      RI <= VIDEO_DATA&VIDEO_DATA&VIDEO_DATA;
+      GI <= VIDEO_DATA&VIDEO_DATA&VIDEO_DATA;
+      BI <= VIDEO_DATA&VIDEO_DATA&VIDEO_DATA;
+
+      VGA_SCANDOUBLER : entity work.vga_scandoubler
+        port map(
+          clkvideo => PIX_CLK_COUNTER(0),
+          clkvga => CLK_12M288,
+          enable_scandoubling => VGA_MODE,
+          disable_scaneffect => '1',
+          ri => RI,
+          gi => GI,
+          bi => BI,
+          hsync_ext_n => HSYNC_Q_n,
+          vsync_ext_n => VSYNC_Q_n,
+          csync_ext_n => VIDEO_SYNC,
+          ro => VGA_R,
+          go => VGA_G,
+          bo => VGA_B,
+          hsync => VGA_HSYNC,
+          vsync => VGA_VSYNC
+        );
       
 
 --       VGA_SCANDOUBLER : entity work.vga_scandoubler

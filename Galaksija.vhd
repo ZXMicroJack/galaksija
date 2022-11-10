@@ -156,6 +156,8 @@ architecture rtl of Galaksija is
 	signal CHROM_A : std_logic_vector(10 downto 0);
 	signal CHROM_D : std_logic_vector(7 downto 0);
 	signal SHREG : std_logic_vector(7 downto 0);
+	signal cram_out : std_logic_vector(2 downto 0);
+  signal CRAM_WEN : std_logic;
 
 	signal VIDEO_DATA_int : std_logic;
 
@@ -206,6 +208,9 @@ architecture rtl of Galaksija is
   signal VGA_B_int                        : std_logic;
   signal VIDEO_DATA       : std_logic;
   signal VIDEO_SYNC       : std_logic;
+  signal VIDEO_DATA_R : std_logic;
+  signal VIDEO_DATA_G : std_logic;
+  signal VIDEO_DATA_B : std_logic;
 	
 	-- 0x80 if z, 0xff if p, and 0x00 if n
 	
@@ -442,6 +447,7 @@ architecture rtl of Galaksija is
 
 	signal VGA_VADDR, VGA_HADDR : std_logic_vector(5 downto 0);
 	signal VGA_CLK25M : std_logic;
+	signal COL_VADDR, COL_HADDR : std_logic_vector(10 downto 0);
 	signal COLORS : std_logic_vector(2 downto 0);
 
 	signal port_FFFE : std_logic := '0';
@@ -452,6 +458,10 @@ architecture rtl of Galaksija is
 	signal CLK_12M288B : std_logic;
   signal VIDEO_toggle : std_logic;
   signal VGA_MODE : std_logic := '1';
+
+	signal SCAN_VADDR, SCAN_HADDR : std_logic_vector(10 downto 0);
+  
+  
 begin
 	--
 	-- Expansion port
@@ -952,6 +962,31 @@ tristategenerate: for i in 0 to 7 generate
 			end if;
 		end if;
 	end process;
+	
+
+	--MJ
+
+	process(PIX_CLK,VSYNC_Q_n,LOAD_SCAN_LINE_n_prev,LOAD_SCAN_LINE_n,LOAD_SCAN_LINE_n_prev)
+	begin
+		if (PIX_CLK'event) and (PIX_CLK = '1') then
+      if (VSYNC_Q_n = '0') then
+        SCAN_HADDR(10 downto 0) <= "00000000000";
+        SCAN_VADDR(10 downto 0) <= "00000000000";
+      elsif (SCAN_HADDR(10 downto 0) = "00000000000") then
+        if (LOAD_SCAN_LINE_n_prev = '1' and LOAD_SCAN_LINE_n = '0') then
+          SCAN_HADDR <= SCAN_HADDR + 1;
+        end if;
+      elsif (HSYNC_Q_n = '0') then
+        SCAN_HADDR(10 downto 0) <= "00000000000";
+        SCAN_VADDR <= SCAN_VADDR + 1;
+      else
+        SCAN_HADDR <= SCAN_HADDR + 1;
+      end if;
+		end if;
+	end process;
+	
+	
+
 		
 	VIDEO_DATA_int <=  not SHREG(7) when SYNC = '1' else
                       '0'; -- Blank video when SYNC is active
@@ -1044,9 +1079,36 @@ tristategenerate: for i in 0 to 7 generate
 --       RI <= VGA_R_int&VGA_R_int&VGA_R_int;
 --       GI <= VGA_G_int&VGA_G_int&VGA_G_int;
 --       BI <= VGA_B_int&VGA_B_int&VGA_B_int;
-      RI <= VIDEO_DATA&VIDEO_DATA&VIDEO_DATA;
-      GI <= VIDEO_DATA&VIDEO_DATA&VIDEO_DATA;
-      BI <= VIDEO_DATA&VIDEO_DATA&VIDEO_DATA;
+
+--       THIS WORKS
+--       RI <= VIDEO_DATA&VIDEO_DATA&VIDEO_DATA;
+--       GI <= VIDEO_DATA&VIDEO_DATA&VIDEO_DATA;
+--       BI <= VIDEO_DATA&VIDEO_DATA&VIDEO_DATA;
+
+--       VIDEO_DATA_R <= VIDEO_DATA and not(port_FFFF(2)) when port_FFFE = '0' else
+--             VIDEO_DATA and not(COLORS(2));
+--       VIDEO_DATA_G <= VIDEO_DATA and not(port_FFFF(1)) when port_FFFE = '0' else
+--             VIDEO_DATA and not(COLORS(1));
+--       VIDEO_DATA_B <= VIDEO_DATA and not(port_FFFF(0)) when port_FFFE = '0' else
+--             VIDEO_DATA and not(COLORS(0));
+
+      VIDEO_COLORING : process(VIDEO_DATA, port_FFFE, COLORS, port_FFFF) begin
+        if (PIX_CLK'event and PIX_CLK = '1') then
+          if (port_FFFE = '0') then
+            VIDEO_DATA_R <= VIDEO_DATA and not(port_FFFF(2));
+            VIDEO_DATA_G <= VIDEO_DATA and not(port_FFFF(1));
+            VIDEO_DATA_B <= VIDEO_DATA and not(port_FFFF(0));
+          else
+            VIDEO_DATA_R <= VIDEO_DATA and not(COLORS(2));
+            VIDEO_DATA_G <= VIDEO_DATA and not(COLORS(1));
+            VIDEO_DATA_B <= VIDEO_DATA and not(COLORS(0));
+          end if;
+        end if;
+      end process;
+            
+      RI <= VIDEO_DATA_R&VIDEO_DATA_R&VIDEO_DATA_R;
+      GI <= VIDEO_DATA_G&VIDEO_DATA_G&VIDEO_DATA_G;
+      BI <= VIDEO_DATA_B&VIDEO_DATA_B&VIDEO_DATA_B;
 
       VGA_SCANDOUBLER : entity work.vga_scandoubler
         port map(
@@ -1111,32 +1173,32 @@ tristategenerate: for i in 0 to 7 generate
 --       VGA_HSYNC <= VGA_HSYNC_int;
 --       VGA_VSYNC <= VGA_VSYNC_int;
 	
-	VGAOUT: composite_to_vga
-				port map(
-								CLK => PIX_CLK,
-								RESET_n => RESET_n_VGA,
-								VIDEO_DATA => VIDEO_DATA_int_VGA,
-								VIDEO_SYNC => SYNC_VGA,
-								START_FRAME_n => WAIT_n_VGA,
-								HPOS => HPOS_VGA,
-								
-								COL_VADDR => VGA_VADDR,
-								COL_HADDR => VGA_HADDR,
-								COL_CLK => VGA_CLK25M,
-																
-								CLK_50M => CLK_12M288B,
-								VGA_HSYNC => VGA_HSYNC_int,
-								VGA_VSYNC => VGA_VSYNC_int,
-								VGA_VIDEO => VGA_VIDEO,
-								VGA_MODE => '0'
-							);
+-- 	VGAOUT: composite_to_vga
+-- 				port map(
+-- 								CLK => PIX_CLK,
+-- 								RESET_n => RESET_n_VGA,
+-- 								VIDEO_DATA => VIDEO_DATA_int_VGA,
+-- 								VIDEO_SYNC => SYNC_VGA,
+-- 								START_FRAME_n => WAIT_n_VGA,
+-- 								HPOS => HPOS_VGA,
+-- 								
+-- 								COL_VADDR => VGA_VADDR,
+-- 								COL_HADDR => VGA_HADDR,
+-- 								COL_CLK => VGA_CLK25M,
+-- 																
+-- 								CLK_50M => CLK_12M288B,
+-- 								VGA_HSYNC => VGA_HSYNC_int,
+-- 								VGA_VSYNC => VGA_VSYNC_int,
+-- 								VGA_VIDEO => VGA_VIDEO,
+-- 								VGA_MODE => '0'
+-- 							);
 	
-	VGA_R_int <= VGA_VIDEO and not(port_FFFF(2)) when port_FFFE = '0' else
-				VGA_VIDEO and not(COLORS(2));
-	VGA_G_int <= VGA_VIDEO and not(port_FFFF(1)) when port_FFFE = '0' else
-				VGA_VIDEO and not(COLORS(1));
-	VGA_B_int <= VGA_VIDEO and not(port_FFFF(0)) when port_FFFE = '0' else
-				VGA_VIDEO and not(COLORS(0));
+-- 	VGA_R_int <= VGA_VIDEO and not(port_FFFF(2)) when port_FFFE = '0' else
+-- 				VGA_VIDEO and not(COLORS(2));
+-- 	VGA_G_int <= VGA_VIDEO and not(port_FFFF(1)) when port_FFFE = '0' else
+-- 				VGA_VIDEO and not(COLORS(1));
+-- 	VGA_B_int <= VGA_VIDEO and not(port_FFFF(0)) when port_FFFE = '0' else
+-- 				VGA_VIDEO and not(COLORS(0));
 	
 	-- Color
 
@@ -1168,6 +1230,40 @@ tristategenerate: for i in 0 to 7 generate
 		end if;
 	end process;
 
+
+-- module dpsram#(parameter RAM_SIZE = 32768, parameter ADDRESS_WIDTH = 15, parameter WORD_SIZE = 8)(
+--     output wire [WORD_SIZE-1:0] q1,
+--     output wire [WORD_SIZE-1:0] q2,
+--     input wire [ADDRESS_WIDTH-1:0] a1,
+--     input wire [ADDRESS_WIDTH-1:0] a2,
+--     input wire [WORD_SIZE-1:0] d1,
+--     input wire [WORD_SIZE-1:0] d2,
+--     input wire clk,
+--     input wire wren1,
+--     input wire wren2);
+    
+  
+--   CRAM_WEN <= not WR_n and A(15) and A(14) and A(13) and not A(12) and not MREQ_n;
+-- 	CRAM: entity dpsram
+--     generic map (
+--       RAM_SIZE => 3072,
+--       ADDRESS_WIDTH => 12,
+--       WORD_SIZE => 3
+--     )
+--     port map(
+--       a1 => A(11 downto 0),
+--       q1 => cram_out,
+--       d1 => D(2 downto 0),
+--       wren1 => CRAM_WEN,
+--       clk => PIX_CLK,
+--       
+--       a2 => SCAN_HADDR(7 downto 2) & SCAN_HADDR(7 downto 2),
+--       wren2 => '0',
+--       d2 => "000",
+--       q2 => COLORS(2 downto 0)
+--     )
+--     ;
+	
 	CRAM: color_ram 
 		 Port map ( CLK_WR => PIX_CLK,
 						A => A, 
@@ -1175,9 +1271,9 @@ tristategenerate: for i in 0 to 7 generate
 						WR_n => WR_n,
 						MREQ_n => MREQ_n,
 						OE_n => RD_n,
-						VADDR => VGA_VADDR,
-						HADDR => VGA_HADDR,
-						CLK_RD => VGA_CLK25M,
+						VADDR => SCAN_VADDR(7 downto 2),
+						HADDR => SCAN_HADDR(7 downto 2),
+						CLK_RD => PIX_CLK,
 						COLORS => COLORS
 				  );
 	

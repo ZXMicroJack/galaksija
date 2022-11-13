@@ -19,16 +19,16 @@ entity Galaksija is
 -- 				VIDEO_DATA	: out STD_LOGIC;
 -- 				VIDEO_SYNC 	: out STD_LOGIC;
 -- 				
-				LATCH_D0		: out STD_LOGIC;
-				LATCH_D4		: out STD_LOGIC;
+-- 				LATCH_D0		: out STD_LOGIC;
+-- 				LATCH_D4		: out STD_LOGIC;
 				
 				-- Exernal port
-				DQext			: inout STD_LOGIC_VECTOR(7 downto 0);
-				Aext			: out STD_LOGIC_VECTOR(7 downto 0);
-				RDnext		: out STD_LOGIC;
-				WRnext		: out STD_LOGIC;
-				IORQnext		: out STD_LOGIC;
-				M1next		: out STD_LOGIC;
+-- 				DQext			: inout STD_LOGIC_VECTOR(7 downto 0);
+-- 				Aext			: out STD_LOGIC_VECTOR(7 downto 0);
+-- 				RDnext		: out STD_LOGIC;
+-- 				WRnext		: out STD_LOGIC;
+-- 				IORQnext		: out STD_LOGIC;
+-- 				M1next		: out STD_LOGIC;
 				
 				-- End of external port
 				
@@ -43,7 +43,11 @@ entity Galaksija is
 				VGA_B : out STD_LOGIC_VECTOR(2 downto 0);
 				
 				STDN : out std_logic;
-				STDNB : out std_logic
+				STDNB : out std_logic;
+
+        SRAM_ADDR : out std_logic_vector(15 downto 0);
+        SRAM_DATA : inout std_logic_vector(7 downto 0);
+        SRAM_WE_N : out std_logic
 				
 			);
 end Galaksija;
@@ -211,6 +215,8 @@ architecture rtl of Galaksija is
   signal VIDEO_DATA_R : std_logic;
   signal VIDEO_DATA_G : std_logic;
   signal VIDEO_DATA_B : std_logic;
+  
+  signal SRAM_CS_n : std_logic;
 	
 	-- 0x80 if z, 0xff if p, and 0x00 if n
 	
@@ -467,47 +473,47 @@ begin
 	-- Expansion port
 	--
 
-	Aext <= A(7 downto 0);
-	RDnext <= RD_n;
-	WRnext <= WR_n;
-	IORQnext <= IORQ_n;
-	M1next <= M1_n;
+-- 	Aext <= A(7 downto 0);
+-- 	RDnext <= RD_n;
+-- 	WRnext <= WR_n;
+-- 	IORQnext <= IORQ_n;
+-- 	M1next <= M1_n;
 	STDN <= '0';
 	STDNB <= '1';
 	
 	-- Output buffer
 
-iogenerate: for i in 0 to 7 generate	
-	begin
-	IOBUF_inst : IOBUF
-		generic map (
-			DRIVE => 12,
-			IBUF_DELAY_VALUE => "0", -- Specify the amount of added input delay for buffer, "0"-"16" (Spartan-3E/3A only)
-			IFD_DELAY_VALUE => "AUTO", -- Specify the amount of added delay for input register, "AUTO", "0"-"8" (Spartan-3E/3A only)
-			IOSTANDARD => "LVTTL",
-			SLEW => "SLOW")
-   port map (
-      O => Dext_in(i),     -- Buffer output
-      IO => DQext(i),   -- Buffer inout port (connect directly to top-level port)
-      I => D(i),     -- Buffer input
-      T => Dext_outen_n      -- 3-state enable input 
-   );
-	end generate;
-	
-	Dext_outen_n <= WR_n or IORQ_n;
+-- iogenerate: for i in 0 to 7 generate	
+-- 	begin
+-- 	IOBUF_inst : IOBUF
+-- 		generic map (
+-- 			DRIVE => 12,
+-- 			IBUF_DELAY_VALUE => "0", -- Specify the amount of added input delay for buffer, "0"-"16" (Spartan-3E/3A only)
+-- 			IFD_DELAY_VALUE => "AUTO", -- Specify the amount of added delay for input register, "AUTO", "0"-"8" (Spartan-3E/3A only)
+-- 			IOSTANDARD => "LVTTL",
+-- 			SLEW => "SLOW")
+--    port map (
+--       O => Dext_in(i),     -- Buffer output
+--       IO => DQext(i),   -- Buffer inout port (connect directly to top-level port)
+--       I => D(i),     -- Buffer input
+--       T => Dext_outen_n      -- 3-state enable input 
+--    );
+-- 	end generate;
+-- 	
+-- 	Dext_outen_n <= WR_n or IORQ_n;
 
 	
-	Dext_in_en_n <= RD_n or IORQ_n;
+-- 	Dext_in_en_n <= RD_n or IORQ_n;
 	
-tristategenerate: for i in 0 to 7 generate
-	begin
-	Dext_in_buff : tristate_bit
-		port map (
-					DIN => Dext_in(i),
-					DOUT => D(i),
-					EN_n => Dext_in_en_n
-				);
-	end generate;
+-- tristategenerate: for i in 0 to 7 generate
+-- 	begin
+-- 	Dext_in_buff : tristate_bit
+-- 		port map (
+-- 					DIN => Dext_in(i),
+-- 					DOUT => D(i),
+-- 					EN_n => Dext_in_en_n
+-- 				);
+-- 	end generate;
 	
 	--
 	-- clock generation
@@ -751,9 +757,11 @@ tristategenerate: for i in 0 to 7 generate
 	RAM_CS1_n <= '0' when ((DECODER_EN='1') and (A(11)='1') and (A(12)='0') and (A(13)='1')) or (RFSH = '1') else '1';
 	RAM_CS2_n <= '0' when ((DECODER_EN='1') and (A(11)='0') and (A(12)='1') and (A(13)='1')) else '1';
 	RAM_CS3_n <= '0' when ((DECODER_EN='1') and (A(11)='1') and (A(12)='1') and (A(13)='1')) else '1';
+	SRAM_CS_n <= '0' when MREQ_n = '0' and (A(15)='1' or A(14)='1') else '1';
 
 	-- Extended RAM (+2k)
-	RAM_CS4_n <= '0' when ((A(14) = '1') and (A(15) = '0') and (A(11)= '0') and (A(12) = '0') and (A(13)='0')) else '1';
+-- 	RAM_CS4_n <= '0' when ((A(14) = '1') and (A(15) = '0') and (A(11)= '0') and (A(12) = '0') and (A(13)='0')) else '1';
+	RAM_CS4_n <= '1';
 
 	RAM_CS_n <= RAM_CS1_n and RAM_CS2_n and RAM_CS3_n and RAM_CS4_n;
 	
@@ -766,6 +774,15 @@ tristategenerate: for i in 0 to 7 generate
 				"10" & A(10 downto 8) & RAM_A7 & A(6 downto 0) when RAM_CS3_n = '0' else
 				"11" & A(10 downto 8) & RAM_A7 & A(6 downto 0);
 				
+				
+	--
+	-- SRAM
+	--
+	SRAM_ADDR(15 downto 0) <= A(15 downto 0);
+	SRAM_DATA(7 downto 0) <= D(7 downto 0) when SRAM_CS_n = '0' and WR_n = '0' else (others => 'Z');
+	SRAM_WE_N <= '0' when SRAM_CS_n = '0' and WR_n = '0' else '1';
+	D(7 downto 0) <= SRAM_DATA(7 downto 0) when SRAM_CS_n = '0' and RD_n = '0' else (others => 'Z');
+
 	--
 	-- RAM and ROM
 	--
@@ -907,9 +924,9 @@ tristategenerate: for i in 0 to 7 generate
 		end if;
 	end process;
 	
-	LATCH_D5 <= LATCH_DATA(5);
-	LATCH_D4 <= LATCH_DATA(4);
-	LATCH_D0 <= LATCH_DATA(0);
+-- 	LATCH_D5 <= LATCH_DATA(5);
+-- 	LATCH_D4 <= LATCH_DATA(4);
+-- 	LATCH_D0 <= LATCH_DATA(0);
 	
   --LATCH_D6 <= LATCH_DATA(6); -- cassette port output bit 0
   --LATCH_D2 <= LATCH_DATA(2); -- cassette port output bit 1

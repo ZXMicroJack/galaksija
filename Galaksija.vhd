@@ -757,11 +757,17 @@ begin
 	RAM_CS1_n <= '0' when ((DECODER_EN='1') and (A(11)='1') and (A(12)='0') and (A(13)='1')) or (RFSH = '1') else '1';
 	RAM_CS2_n <= '0' when ((DECODER_EN='1') and (A(11)='0') and (A(12)='1') and (A(13)='1')) else '1';
 	RAM_CS3_n <= '0' when ((DECODER_EN='1') and (A(11)='1') and (A(12)='1') and (A(13)='1')) else '1';
-	SRAM_CS_n <= '0' when MREQ_n = '0' and (A(15)='1' or A(14)='1') else '1';
+-- 	SRAM_CS_n <= '0' when MREQ_n = '0' and (A(15)='1' or A(14)='1') and (A(15 downto 13) /= "111") else '1';
+	SRAM_CS_n <= '1';
+	
+	-- 4000 - E000
+	-- 0100 ....  1011
+	-- 010 011 100 101 110 
+	
 
 	-- Extended RAM (+2k)
--- 	RAM_CS4_n <= '0' when ((A(14) = '1') and (A(15) = '0') and (A(11)= '0') and (A(12) = '0') and (A(13)='0')) else '1';
-	RAM_CS4_n <= '1';
+	RAM_CS4_n <= '0' when ((A(14) = '1') and (A(15) = '0') and (A(11)= '0') and (A(12) = '0') and (A(13)='0')) else '1';
+-- 	RAM_CS4_n <= '1';
 
 	RAM_CS_n <= RAM_CS1_n and RAM_CS2_n and RAM_CS3_n and RAM_CS4_n;
 	
@@ -778,10 +784,10 @@ begin
 	--
 	-- SRAM
 	--
-	SRAM_ADDR(15 downto 0) <= A(15 downto 0);
+	SRAM_ADDR(15 downto 0) <= A(15 downto 8) & RAM_A7 & A(6 downto 0);
 	SRAM_DATA(7 downto 0) <= D(7 downto 0) when SRAM_CS_n = '0' and WR_n = '0' else (others => 'Z');
 	SRAM_WE_N <= '0' when SRAM_CS_n = '0' and WR_n = '0' else '1';
-	D(7 downto 0) <= SRAM_DATA(7 downto 0) when SRAM_CS_n = '0' and RD_n = '0' else (others => 'Z');
+-- 	D(7 downto 0) <= SRAM_DATA(7 downto 0) when SRAM_CS_n = '0' and RD_n = '0' else (others => 'Z');
 
 	--
 	-- RAM and ROM

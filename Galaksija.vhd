@@ -770,9 +770,15 @@ begin
 	
 	-- uncomment for 6k
 -- 	SRAM_CS_n <= '1';
-	
+
+  -- +32k + 6k
+-- 	SRAM_CS_n <= '0' when MREQ_n = '0' and (A(15 downto 14)="01" or A(15 downto 14)="10") else '1';
+
+	-- +MAX - 16bytes
+  SRAM_CS_n <= '0' when MREQ_n = '0' and A(15 downto 14)/="00" and A(15 downto 4) /= X"FFF" else '1';
+
 -- 	SRAM_CS_n <= '0' when MREQ_n = '0' and (A(15)='1' or A(14)='1') and (A(15 downto 14) /= "11") else '1';
-	SRAM_CS_n <= '0' when MREQ_n = '0' and (A(15)='1' or A(14)='1') and (A(15 downto 13) /= "111") else '1';
+-- 	SRAM_CS_n <= '0' when MREQ_n = '0' and (A(15)='1' or A(14)='1') and (A(15 downto 13) /= "111") else '1';
 -- 	SRAM_CS_n <= SRAM_CS1_n and SRAM_CS2_n;
 	
 	-- 4000 - E000

@@ -16,12 +16,6 @@ entity Galaksija is
 				PS2_CLK		: in STD_LOGIC;
 				PS2_DATA		: in STD_LOGIC;
 	 
--- 				VIDEO_DATA	: out STD_LOGIC;
--- 				VIDEO_SYNC 	: out STD_LOGIC;
--- 				
--- 				LATCH_D0		: out STD_LOGIC;
--- 				LATCH_D4		: out STD_LOGIC;
-				
 				-- Exernal port
 -- 				DQext			: inout STD_LOGIC_VECTOR(7 downto 0);
 -- 				Aext			: out STD_LOGIC_VECTOR(7 downto 0);
@@ -57,10 +51,6 @@ entity Galaksija is
 end Galaksija;
 
 architecture rtl of Galaksija is
-	-- Generate only Picoblaze system
---	constant picoblaze_only : boolean := true;
-	constant picoblaze_only : boolean := false;
-
 	--
 	-- Z80A signals
 	--
@@ -188,15 +178,6 @@ architecture rtl of Galaksija is
 	signal KEY_CODE : std_logic_vector(7 downto 0);
 	signal KEY_STROBE : std_logic;
 	
-
-	signal PBLAZE_VADDR : std_logic_vector(15 downto 0);
-	signal PBLAZE_VDATA : std_logic;
-	signal PBLAZE_VWR : std_logic;
-	signal PBLAZE_LIN : std_logic;
-	signal PBLAZE_LOUT : std_logic;
-
-	signal PBLAZE_CHADDR : std_logic_vector(10 downto 0);
-	
 -- 	signal CLK_SEL : std_logic_vector(1 downto 0) := "11";
 	signal CLK_SEL : std_logic_vector(1 downto 0) := "00";
 	
@@ -310,34 +291,6 @@ architecture rtl of Galaksija is
 				  );
 	end component ram_mem_v2;
 
-	component composite_to_vga is
-		 Port ( CLK : in  STD_LOGIC;	-- Pixel clock
-				  RESET_n : in STD_LOGIC;
-				  VIDEO_DATA : in  STD_LOGIC;
-				  VIDEO_SYNC : in  STD_LOGIC;
-				  START_FRAME_n : in  STD_LOGIC;	-- Should be connected to WAIT_n signal
-				  HPOS : in STD_LOGIC;	-- Horizontal position indicator 2BA8: '1' when horizontal position = 11 else '0'
-
--- 				  ESC_STATE : in STD_LOGIC;
--- 				  CLK_W2 : in STD_LOGIC;
--- 				  WR2 : in STD_LOGIC;
--- 				  AWR2 : in STD_LOGIC_VECTOR(15 downto 0);
--- 				  DIN2 : in STD_LOGIC;
-
-				  COL_VADDR : out STD_LOGIC_VECTOR(5 downto 0);
-				  COL_HADDR : out STD_LOGIC_VECTOR(5 downto 0);
-				  COL_CLK : out STD_LOGIC;
-				  
-				  -- VGA controller signals
-				  CLK_50M	: in std_logic;
-				  VGA_HSYNC : inout std_logic;
-				  VGA_VSYNC : inout std_logic;
-				  VGA_VIDEO : out std_logic;
-				  VGA_MODE : in std_logic
-				 );
-	end component composite_to_vga;
-
-
 	component galaksija_keyboard_v2 is
 		 Port ( CLK : in  STD_LOGIC;
 				  PS2_DATA : in  STD_LOGIC;
@@ -360,48 +313,6 @@ architecture rtl of Galaksija is
 				  DOUT : out  STD_LOGIC;
 				  EN_n : in  STD_LOGIC);
 	end component tristate_bit;
-
-	component tristate_buff is
-		 Port ( DIN : in  STD_LOGIC_VECTOR(7 downto 0);
-				  DOUT : out  STD_LOGIC_VECTOR(7 downto 0);
-				  EN_n : in  STD_LOGIC);
-	end component tristate_buff;
-
-	component picoblaze_soc is
-		 Port (
-			CLK_50M : in  STD_LOGIC;
-			RESET_n : in STD_LOGIC;
-			KEY_STROBE : in STD_LOGIC;
-			KEY_CODE : in STD_LOGIC_VECTOR(7 downto 0);
-			ESC_STATE : in STD_LOGIC;
-
-			CH_ADDR	: out STD_LOGIC_VECTOR(10 downto 0);
-			CH_DATA	: in STD_LOGIC_VECTOR(7 downto 0);
-
-			VIDEO_ADDR : out STD_LOGIC_VECTOR(15 downto 0);
-			VIDEO_DATA : out STD_LOGIC;
-			VIDEO_WR	  : out STD_LOGIC;
-
-			PRAM_CLK2 : out STD_LOGIC;
-			PRAM_WR2 : out STD_LOGIC;
-			PRAM_DIN2 : in STD_LOGIC_VECTOR(7 downto 0);
-			PRAM_DOUT2 : out STD_LOGIC_VECTOR(7 downto 0);
-			PRAM_ADDR2 : out STD_LOGIC_VECTOR(12 downto 0);
-			
-			CLK_SEL : out STD_LOGIC_VECTOR(1 downto 0);
-			
-			LINE_IN : in STD_LOGIC;
-			LINE_OUT : out STD_LOGIC		
-		 );
-	end component picoblaze_soc;
-
-	component clk_deskew is
-		port (
-			CLK_IN : in STD_LOGIC;
-			CLK_OUT : out STD_LOGIC;
-			CLK_FB	: in STD_LOGIC
-				);
-	end component clk_deskew;
 
 	component ram_mem_v3 is
 		 generic ( AddrWidth : integer := 13;
@@ -458,19 +369,6 @@ architecture rtl of Galaksija is
 	signal RESET_n_50M, VIDEO_DATA_int_50M, SYNC_50M, WAIT_n_50M, HPOS_50M : std_logic;
 	signal RESET_n_VGA, VIDEO_DATA_int_VGA, SYNC_VGA, WAIT_n_VGA, HPOS_VGA : std_logic;
 
-	signal PBLAZE_VWR_P50M : std_logic;
-	signal PBLAZE_VADDR_P50M : std_logic_vector(15 downto 0);
-	signal PBLAZE_VDATA_P50M : std_logic;
-		
-	signal PBLAZE_VWR_VGA : std_logic;
-	signal PBLAZE_VADDR_VGA : std_logic_vector(15 downto 0);
-	signal PBLAZE_VDATA_VGA : std_logic;
-
-	signal Dext_in : std_logic_vector(7 downto 0);
-	signal Dext_outen_n : std_logic;
-	signal Dext_in_en_n : std_logic;
-
-
 	signal VGA_VADDR, VGA_HADDR : std_logic_vector(5 downto 0);
 	signal VGA_CLK25M : std_logic;
 	signal COL_VADDR, COL_HADDR : std_logic_vector(10 downto 0);
@@ -494,48 +392,9 @@ begin
 	-- Expansion port
 	--
 
--- 	Aext <= A(7 downto 0);
--- 	RDnext <= RD_n;
--- 	WRnext <= WR_n;
--- 	IORQnext <= IORQ_n;
--- 	M1next <= M1_n;
 	STDN <= '0';
 	STDNB <= '1';
-	
-	-- Output buffer
-
--- iogenerate: for i in 0 to 7 generate	
--- 	begin
--- 	IOBUF_inst : IOBUF
--- 		generic map (
--- 			DRIVE => 12,
--- 			IBUF_DELAY_VALUE => "0", -- Specify the amount of added input delay for buffer, "0"-"16" (Spartan-3E/3A only)
--- 			IFD_DELAY_VALUE => "AUTO", -- Specify the amount of added delay for input register, "AUTO", "0"-"8" (Spartan-3E/3A only)
--- 			IOSTANDARD => "LVTTL",
--- 			SLEW => "SLOW")
---    port map (
---       O => Dext_in(i),     -- Buffer output
---       IO => DQext(i),   -- Buffer inout port (connect directly to top-level port)
---       I => D(i),     -- Buffer input
---       T => Dext_outen_n      -- 3-state enable input 
---    );
--- 	end generate;
--- 	
--- 	Dext_outen_n <= WR_n or IORQ_n;
-
-	
--- 	Dext_in_en_n <= RD_n or IORQ_n;
-	
--- tristategenerate: for i in 0 to 7 generate
--- 	begin
--- 	Dext_in_buff : tristate_bit
--- 		port map (
--- 					DIN => Dext_in(i),
--- 					DOUT => D(i),
--- 					EN_n => Dext_in_en_n
--- 				);
--- 	end generate;
-	
+		
 	--
 	-- clock generation
 	--
@@ -553,8 +412,8 @@ begin
 	-- CPU instantation
 	--
 
-	cpu_inst: if (picoblaze_only=false) generate
-				 begin
+-- 	cpu_inst: if (picoblaze_only=false) generate
+-- 				 begin
 					CPU: T80a
 					generic map ( Mode => 0 )
 					port map (
@@ -573,7 +432,7 @@ begin
 									WR_n => WR_n,
 									RD_n => RD_n
 								);
-				end generate cpu_inst;
+-- 				end generate cpu_inst;
 
 	RFSH <= not RFSH_n;
 
@@ -624,38 +483,20 @@ begin
 
 	CPU_CLK <= PDIV(0);
 	CPU_CLK_n_int <= not CPU_CLK;
-		
 	CPU_CLK_n <= CPU_CLK_n_int;
-	
 	PIX_CLK <= iPIX_CLK;
-
--- 	deskew_VGA: clk_deskew 
--- 		port map(
--- 						CLK_IN => extCLK_50M,
--- 						CLK_OUT => CLK_50M_VGA,
--- 						CLK_FB => CLK_50M_VGA
--- 					);
---   CLK_50M_VGA <= extCLK_50M;
---   CLK_50M_VGA <= CLK_12M288B;
-
--- 	CLK_50M_PBLAZE <= extCLK_50M;
--- 	CLK_50M <= extCLK_50M;
 	CLK_50M <= CLK_12M288;
 
 	-- CLK_SEL is set by Picoblaze via CPU_FREQ menu
-	process (PIX_CLK_COUNTER, CLK_SEL, ESC_STATE, CLK_12M288)
+	process (PIX_CLK_COUNTER, CLK_SEL, CLK_12M288)
 	begin
-		if (ESC_STATE = '0') then
-			case CLK_SEL is
-				when "00" => iPIX_CLK <= PIX_CLK_COUNTER(0);
-				when "01" => iPIX_CLK <= CLK_12M288;
-				when "10" => iPIX_CLK <= PIX_CLK_COUNTER(0);
-				when "11" => iPIX_CLK <= CLK_12M288;
-				when others => null;
-			end case;
-		else
-			iPIX_CLK <= '0';	-- Stop Galaksija clock if Picoblaze is active
-		end if;
+    case CLK_SEL is
+      when "00" => iPIX_CLK <= PIX_CLK_COUNTER(0);
+      when "01" => iPIX_CLK <= CLK_12M288;
+      when "10" => iPIX_CLK <= PIX_CLK_COUNTER(0);
+      when "11" => iPIX_CLK <= CLK_12M288;
+      when others => null;
+    end case;
 	end process;
 	
   KEYB_CLK        <= PIX_CLK_COUNTER(0);      -- 6,25 MHz
@@ -750,11 +591,6 @@ begin
 			end if;
 			end if;
 	end process;
-  -- ll = MREQ and RFSH and PIX_CLK_COUNTER(1)
---   LOAD_SCAN_LINE_n_int <= not (PIX_CLK_COUNTER(1) and (not MREQ_n) and RFSH);
-  -- TODO get this right
---   LOAD_SCAN_LINE_n_int <= not (PIX_CLK_COUNTER(1) and (not MREQ_n) and RFSH);
---   LOAD_SCAN_LINE_n_int <= (not MREQ_n) and (not RFSH_n);
 
 	--
 	-- Address decoder
@@ -763,9 +599,6 @@ begin
 	DECODER_EN <= (not(MREQ_n) and not(A(14))) and not(A(15));
 	
 	-- Keyboard and latch address decoding
--- 	LATCH_KBD_CS_n <= '0' when 
---     ((A(11)='0') and (A(12)='0') and (A(13)='1') and (DECODER_EN = '1')) and (RFSH_n = '1')
---     else '1';
 	LATCH_KBD_CS_n <= '0' when 
     ((A(11)='0') and (A(12)='0') and (A(13)='1') and (DECODER_EN = '1'))
     else '1';
@@ -834,9 +667,9 @@ begin
 	-- RAM and ROM
 	--
 
-	mem_inst: if (picoblaze_only=false) generate
-				 begin
-
+-- 	mem_inst: if (picoblaze_only=false) generate
+-- 				 begin
+-- 
 					RAM: ram_mem_v3
 					generic map ( AddrWidth => 13, RAMFileName=>"highres_ram.txt" )
 					port map (
@@ -863,7 +696,7 @@ begin
 									CE_n => '0',
 									CLK => PIX_CLK
 								);
-				end generate mem_inst;
+-- 				end generate mem_inst;
 
 	--
 	-- Keyboard.
@@ -978,8 +811,6 @@ begin
 -- 	LATCH_D4 <= LATCH_DATA(4);
 -- 	LATCH_D0 <= LATCH_DATA(0);
 	
-  --LATCH_D6 <= LATCH_DATA(6); -- cassette port output bit 0
-  --LATCH_D2 <= LATCH_DATA(2); -- cassette port output bit 1
   --Cassette port is high if both output bits are 1, low if both are 0 and
   --zero if one bit is 1 and one is 0.
   --pulse is 134 samples 2 pulses in 134 samples for 1.
@@ -994,9 +825,9 @@ begin
 	end process;
 	
 	-- Character generator address	
-	CHROM_A <= LATCH_DATA(3 downto 0) & TMP(7) & TMP(5 downto 0) when ESC_STATE = '0' else PBLAZE_CHADDR;
+	CHROM_A <= LATCH_DATA(3 downto 0) & TMP(7) & TMP(5 downto 0);
 -- 	CHROM_CLK <= PIX_CLK when ESC_STATE = '0' else CLK_50M;
-	CHROM_CLK <= PIX_CLK when ESC_STATE = '0' else '0';
+	CHROM_CLK <= PIX_CLK;
 
 	CH_GEN_ROM: galaksija_chgen_rom
 	port map (
@@ -1008,16 +839,6 @@ begin
 				);
 	
 	-- Video shift register
--- 	process(PIX_CLK, LOAD_SCAN_LINE_n, SHREG)
--- 	begin
--- 		if (PIX_CLK'event) and (PIX_CLK = '1') then
--- 			if (LOAD_SCAN_LINE_n = '0') then
--- 				SHREG <= CHROM_D;
--- 			else
--- 				SHREG <= SHREG(6 downto 0) & '0';
--- 			end if;
--- 		end if;
--- 	end process;
   process(PIX_CLK, LOAD_SCAN_LINE_n, SHREG)
 	begin
 		if (PIX_CLK'event) and (PIX_CLK = '1') then
@@ -1092,73 +913,12 @@ begin
 			end if;
 		end process;
 
--- 		process(CLK_50M_PBLAZE, PBLAZE_VWR, PBLAZE_VADDR, PBLAZE_VDATA)
--- 		begin
--- 			if (CLK_50M_PBLAZE'event) and (CLK_50M_PBLAZE = '1') then
--- 				PBLAZE_VWR_P50M <= PBLAZE_VWR;
--- 				PBLAZE_VADDR_P50M <= PBLAZE_VADDR;
--- 				PBLAZE_VDATA_P50M <= PBLAZE_VDATA;
--- 			end if;
--- 		end process;
--- 
--- 		process(CLK_50M_VGA, PBLAZE_VWR_P50M, PBLAZE_VADDR_P50M, PBLAZE_VDATA_P50M)
--- 		begin
--- 			if (CLK_50M_VGA'event) and (CLK_50M_VGA = '1') then
--- 				PBLAZE_VWR_VGA <= PBLAZE_VWR_P50M;
--- 				PBLAZE_VADDR_VGA <= PBLAZE_VADDR_P50M;
--- 				PBLAZE_VDATA_VGA <= PBLAZE_VDATA_P50M;
--- 			end if;
--- 		end process;
-
-	--
-	--
-	--
-
       VGA_RGB_SWITCH : process(VGA_MODE, VIDEO_toggle) begin
         if (VIDEO_toggle'event) and (VIDEO_toggle = '1') then
           VGA_MODE <= not VGA_MODE;
         end if;
       end process;
        
---       VGA_R <= VGA_R_int when VGA_MODE = '1' else VIDEO_DATA;
---       VGA_G <= VGA_G_int when VGA_MODE = '1' else VIDEO_DATA;
---       VGA_B <= VGA_B_int when VGA_MODE = '1' else VIDEO_DATA;
---       VGA_HSYNC <= VGA_HSYNC_int when VGA_MODE = '1' else VIDEO_SYNC;
---       VGA_VSYNC <= VGA_VSYNC_int when VGA_MODE = '1' else '1';
-
---       VGA_R <= VGA_R_int&VGA_R_int&VGA_R_int;
---       VGA_G <= VGA_G_int&VGA_G_int&VGA_G_int;
---       VGA_B <= VGA_B_int&VGA_B_int&VGA_B_int;
---       VGA_HSYNC <= VGA_HSYNC_int when VGA_MODE = '1' else (VGA_HSYNC_int xor (not VGA_VSYNC_int));
---       VGA_VSYNC <= VGA_VSYNC_int when VGA_MODE = '1' else '1';
-
-
-      -- THIS WORKS
---       VGA_R <= VIDEO_DATA&VIDEO_DATA&VIDEO_DATA;
---       VGA_G <= VIDEO_DATA&VIDEO_DATA&VIDEO_DATA;
---       VGA_B <= VIDEO_DATA&VIDEO_DATA&VIDEO_DATA;
---       VGA_HSYNC <= VIDEO_SYNC;
---       VGA_VSYNC <= '1';
-
---       VGA_HSYNC_int when VGA_MODE = '1' else (VGA_HSYNC_int xor (not VGA_VSYNC_int));
---       VGA_VSYNC <= VGA_VSYNC_int when VGA_MODE = '1' else '1';
-
---       RI <= VGA_R_int&VGA_R_int&VGA_R_int;
---       GI <= VGA_G_int&VGA_G_int&VGA_G_int;
---       BI <= VGA_B_int&VGA_B_int&VGA_B_int;
-
---       THIS WORKS
---       RI <= VIDEO_DATA&VIDEO_DATA&VIDEO_DATA;
---       GI <= VIDEO_DATA&VIDEO_DATA&VIDEO_DATA;
---       BI <= VIDEO_DATA&VIDEO_DATA&VIDEO_DATA;
-
---       VIDEO_DATA_R <= VIDEO_DATA and not(port_FFFF(2)) when port_FFFE = '0' else
---             VIDEO_DATA and not(COLORS(2));
---       VIDEO_DATA_G <= VIDEO_DATA and not(port_FFFF(1)) when port_FFFE = '0' else
---             VIDEO_DATA and not(COLORS(1));
---       VIDEO_DATA_B <= VIDEO_DATA and not(port_FFFF(0)) when port_FFFE = '0' else
---             VIDEO_DATA and not(COLORS(0));
-
       VIDEO_COLORING : process(VIDEO_DATA, port_FFFE, COLORS, port_FFFF) begin
         if (PIX_CLK'event and PIX_CLK = '1') then
           if (port_FFFE = '0') then
@@ -1196,79 +956,6 @@ begin
           vsync => VGA_VSYNC
         );
       
-
---       VGA_SCANDOUBLER : entity work.vga_scandoubler
---         port map(
---           clkvideo => PIX_CLK_COUNTER(0),
---           clkvga => CLK_12M288,
---           enable_scandoubling => VGA_MODE,
---           disable_scaneffect => '1',
---           ri => RI,
---           gi => GI,
---           bi => BI,
---           hsync_ext_n => VGA_HSYNC_int,
---           vsync_ext_n => VGA_VSYNC_int,
---           csync_ext_n => VGA_HSYNC_int xor (not VGA_VSYNC_int),
---           ro => VGA_R,
---           go => VGA_G,
---           bo => VGA_B,
---           hsync => VGA_HSYNC,
---           vsync => VGA_VSYNC
---         );
-
--- module vga_scandoubler (
--- 	input wire clkvideo,
--- 	input wire clkvga,
---   input wire enable_scandoubling,
---   input wire disable_scaneffect,  // 1 to disable scanlines
--- 	input wire [2:0] ri,
--- 	input wire [2:0] gi,
--- 	input wire [2:0] bi,
--- 	input wire hsync_ext_n,
--- 	input wire vsync_ext_n,
---   input wire csync_ext_n,
--- 	output reg [2:0] ro,
--- 	output reg [2:0] go,
--- 	output reg [2:0] bo,
--- 	output reg hsync,
--- 	output reg vsync
---   );
-
-      
-      
-      
---       VGA_HSYNC <= VGA_HSYNC_int;
---       VGA_VSYNC <= VGA_VSYNC_int;
-	
--- 	VGAOUT: composite_to_vga
--- 				port map(
--- 								CLK => PIX_CLK,
--- 								RESET_n => RESET_n_VGA,
--- 								VIDEO_DATA => VIDEO_DATA_int_VGA,
--- 								VIDEO_SYNC => SYNC_VGA,
--- 								START_FRAME_n => WAIT_n_VGA,
--- 								HPOS => HPOS_VGA,
--- 								
--- 								COL_VADDR => VGA_VADDR,
--- 								COL_HADDR => VGA_HADDR,
--- 								COL_CLK => VGA_CLK25M,
--- 																
--- 								CLK_50M => CLK_12M288B,
--- 								VGA_HSYNC => VGA_HSYNC_int,
--- 								VGA_VSYNC => VGA_VSYNC_int,
--- 								VGA_VIDEO => VGA_VIDEO,
--- 								VGA_MODE => '0'
--- 							);
-	
--- 	VGA_R_int <= VGA_VIDEO and not(port_FFFF(2)) when port_FFFE = '0' else
--- 				VGA_VIDEO and not(COLORS(2));
--- 	VGA_G_int <= VGA_VIDEO and not(port_FFFF(1)) when port_FFFE = '0' else
--- 				VGA_VIDEO and not(COLORS(1));
--- 	VGA_B_int <= VGA_VIDEO and not(port_FFFF(0)) when port_FFFE = '0' else
--- 				VGA_VIDEO and not(COLORS(0));
-	
-	-- Color
-
 	-- Color is specified by writing to the port FFFF
 	process(RESET_n, PIX_CLK, D, A, WR_n)
 	begin
@@ -1298,39 +985,6 @@ begin
 	end process;
 
 
--- module dpsram#(parameter RAM_SIZE = 32768, parameter ADDRESS_WIDTH = 15, parameter WORD_SIZE = 8)(
---     output wire [WORD_SIZE-1:0] q1,
---     output wire [WORD_SIZE-1:0] q2,
---     input wire [ADDRESS_WIDTH-1:0] a1,
---     input wire [ADDRESS_WIDTH-1:0] a2,
---     input wire [WORD_SIZE-1:0] d1,
---     input wire [WORD_SIZE-1:0] d2,
---     input wire clk,
---     input wire wren1,
---     input wire wren2);
-    
-  
---   CRAM_WEN <= not WR_n and A(15) and A(14) and A(13) and not A(12) and not MREQ_n;
--- 	CRAM: entity dpsram
---     generic map (
---       RAM_SIZE => 3072,
---       ADDRESS_WIDTH => 12,
---       WORD_SIZE => 3
---     )
---     port map(
---       a1 => A(11 downto 0),
---       q1 => cram_out,
---       d1 => D(2 downto 0),
---       wren1 => CRAM_WEN,
---       clk => PIX_CLK,
---       
---       a2 => SCAN_HADDR(7 downto 2) & SCAN_HADDR(7 downto 2),
---       wren2 => '0',
---       d2 => "000",
---       q2 => COLORS(2 downto 0)
---     )
---     ;
-	
 	CRAM: color_ram 
 		 Port map ( CLK_WR => PIX_CLK,
 						A => A, 
@@ -1381,41 +1035,6 @@ begin
 			end if;
 		end if;
 	end process;
-		
-	--
-	-- Picoblaze system for data storage
-	--
-	
--- 	pblaze_soc: picoblaze_soc 
--- 		 Port map(
--- 			CLK_50M => CLK_50M_PBLAZE,
--- 			RESET_n => RESET_n,
--- 			KEY_STROBE => KEY_STROBE,
--- 			KEY_CODE => KEY_CODE,
--- 			ESC_STATE => ESC_STATE,
--- 			
--- 			CH_ADDR => PBLAZE_CHADDR,
--- 			CH_DATA => CHROM_D,
--- 
--- 			VIDEO_ADDR => PBLAZE_VADDR,
--- 			VIDEO_DATA => PBLAZE_VDATA,
--- 			VIDEO_WR	  => PBLAZE_VWR,
--- 			
--- 			PRAM_CLK2 => PRAM_CLK2,
--- 			PRAM_WR2 => PRAM_WR2,
--- 			PRAM_DIN2 => PRAM_DOUT2,
--- 			PRAM_DOUT2 => PRAM_DIN2,
--- 			PRAM_ADDR2 => PRAM_ADDR2,
--- 			
--- 			CLK_SEL => CLK_SEL,
--- 			
--- 			LINE_IN => PBLAZE_LIN,
--- 			LINE_OUT => PBLAZE_LOUT
--- 		 );
-		
-	--
-	--
-	--	
 
 -- 	fifo #(.RAM_SIZE(512), .ADDRESS_WIDTH(9)) hyperload_fifo_inst(
 --   .q(hyperload_fifo_data[7:0]),

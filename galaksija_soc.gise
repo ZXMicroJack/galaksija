@@ -102,7 +102,7 @@
       <status xil_pn:value="SuccessfullyRun"/>
       <status xil_pn:value="ReadyToRun"/>
     </transform>
-    <transform xil_pn:end_ts="1668435032" xil_pn:in_ck="-3498512407021598705" xil_pn:name="TRANEXT_xstsynthesize_spartan6" xil_pn:prop_ck="5916863859795302429" xil_pn:start_ts="1668435005">
+    <transform xil_pn:end_ts="1668527730" xil_pn:in_ck="1880531494728615787" xil_pn:name="TRANEXT_xstsynthesize_spartan6" xil_pn:prop_ck="5916863859795302429" xil_pn:start_ts="1668527692">
       <status xil_pn:value="SuccessfullyRun"/>
       <status xil_pn:value="WarningsGenerated"/>
       <status xil_pn:value="ReadyToRun"/>
@@ -119,11 +119,11 @@
       <outfile xil_pn:name="webtalk_pn.xml"/>
       <outfile xil_pn:name="xst"/>
     </transform>
-    <transform xil_pn:end_ts="1668296781" xil_pn:in_ck="-5634400651365477133" xil_pn:name="TRAN_compileBCD2" xil_pn:prop_ck="6604764647009158612" xil_pn:start_ts="1668296781">
+    <transform xil_pn:end_ts="1668465522" xil_pn:in_ck="-5634400651365477133" xil_pn:name="TRAN_compileBCD2" xil_pn:prop_ck="6604764647009158612" xil_pn:start_ts="1668465522">
       <status xil_pn:value="SuccessfullyRun"/>
       <status xil_pn:value="ReadyToRun"/>
     </transform>
-    <transform xil_pn:end_ts="1668435038" xil_pn:in_ck="-2586229074593358400" xil_pn:name="TRANEXT_ngdbuild_FPGA" xil_pn:prop_ck="3686798096884294584" xil_pn:start_ts="1668435032">
+    <transform xil_pn:end_ts="1668527737" xil_pn:in_ck="-2586229074593358400" xil_pn:name="TRANEXT_ngdbuild_FPGA" xil_pn:prop_ck="3686798096884294584" xil_pn:start_ts="1668527730">
       <status xil_pn:value="SuccessfullyRun"/>
       <status xil_pn:value="ReadyToRun"/>
       <outfile xil_pn:name="Galaksija.bld"/>
@@ -132,8 +132,9 @@
       <outfile xil_pn:name="_ngo"/>
       <outfile xil_pn:name="_xmsgs/ngdbuild.xmsgs"/>
     </transform>
-    <transform xil_pn:end_ts="1668435058" xil_pn:in_ck="-2886107302273509535" xil_pn:name="TRANEXT_map_spartan6" xil_pn:prop_ck="-9070037347267670262" xil_pn:start_ts="1668435038">
+    <transform xil_pn:end_ts="1668527764" xil_pn:in_ck="-2886107302273509535" xil_pn:name="TRANEXT_map_spartan6" xil_pn:prop_ck="-9070037347267670262" xil_pn:start_ts="1668527737">
       <status xil_pn:value="SuccessfullyRun"/>
+      <status xil_pn:value="WarningsGenerated"/>
       <status xil_pn:value="ReadyToRun"/>
       <outfile xil_pn:name="Galaksija.pcf"/>
       <outfile xil_pn:name="Galaksija_map.map"/>
@@ -145,7 +146,7 @@
       <outfile xil_pn:name="Galaksija_usage.xml"/>
       <outfile xil_pn:name="_xmsgs/map.xmsgs"/>
     </transform>
-    <transform xil_pn:end_ts="1668435080" xil_pn:in_ck="-4179781726523562214" xil_pn:name="TRANEXT_par_spartan6" xil_pn:prop_ck="-1885771668075636388" xil_pn:start_ts="1668435058">
+    <transform xil_pn:end_ts="1668527798" xil_pn:in_ck="-4179781726523562214" xil_pn:name="TRANEXT_par_spartan6" xil_pn:prop_ck="-1885771668075636388" xil_pn:start_ts="1668527764">
       <status xil_pn:value="SuccessfullyRun"/>
       <status xil_pn:value="WarningsGenerated"/>
       <status xil_pn:value="ReadyToRun"/>
@@ -160,7 +161,7 @@
       <outfile xil_pn:name="Galaksija_par.xrpt"/>
       <outfile xil_pn:name="_xmsgs/par.xmsgs"/>
     </transform>
-    <transform xil_pn:end_ts="1668435094" xil_pn:in_ck="-5634400651365484758" xil_pn:name="TRANEXT_bitFile_spartan6" xil_pn:prop_ck="396117104113915555" xil_pn:start_ts="1668435080">
+    <transform xil_pn:end_ts="1668527817" xil_pn:in_ck="-5634400651365484758" xil_pn:name="TRANEXT_bitFile_spartan6" xil_pn:prop_ck="396117104113915555" xil_pn:start_ts="1668527798">
       <status xil_pn:value="SuccessfullyRun"/>
       <status xil_pn:value="WarningsGenerated"/>
       <status xil_pn:value="ReadyToRun"/>
@@ -173,7 +174,7 @@
       <outfile xil_pn:name="webtalk.log"/>
       <outfile xil_pn:name="webtalk_pn.xml"/>
     </transform>
-    <transform xil_pn:end_ts="1668435080" xil_pn:in_ck="-195669395912662947" xil_pn:name="TRAN_postRouteTrce" xil_pn:prop_ck="-9019495824400740530" xil_pn:start_ts="1668435073">
+    <transform xil_pn:end_ts="1668527798" xil_pn:in_ck="-195669395912662947" xil_pn:name="TRAN_postRouteTrce" xil_pn:prop_ck="-9019495824400740530" xil_pn:start_ts="1668527789">
       <status xil_pn:value="SuccessfullyRun"/>
       <status xil_pn:value="ReadyToRun"/>
       <outfile xil_pn:name="Galaksija.twr"/>

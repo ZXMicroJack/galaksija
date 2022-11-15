@@ -47,8 +47,12 @@ entity Galaksija is
 
         SRAM_ADDR : out std_logic_vector(15 downto 0);
         SRAM_DATA : inout std_logic_vector(7 downto 0);
-        SRAM_WE_N : out std_logic
-				
+        SRAM_WE_N : out std_logic;
+
+        SD_CS_N : out std_logic;
+        SD_CLK : out std_logic;
+        SD_MOSI : out std_logic;
+        SD_MISO : in std_logic
 			);
 end Galaksija;
 
@@ -219,6 +223,20 @@ architecture rtl of Galaksija is
   signal SRAM_CS_n : std_logic;
   signal SRAM_CS1_n : std_logic;
   signal SRAM_CS2_n : std_logic;
+  
+  -- ctrl-module signals
+  signal osd_window : std_logic;
+	signal osd_pixel : std_logic;
+	signal host_divert_keyboard : std_logic;
+	signal host_divert_sdcard : std_logic;
+	signal dswitch : std_logic_vector(15 downto 0);
+	signal RO : std_logic_vector(7 downto 0);
+	signal GO : std_logic_vector(7 downto 0);
+	signal BO : std_logic_vector(7 downto 0);
+	signal PS2_DATA_S : std_logic;
+	signal PS2_CLK_S : std_logic;
+
+  
 	
 	-- 0x80 if z, 0xff if p, and 0x00 if n
 	
@@ -464,6 +482,7 @@ architecture rtl of Galaksija is
 	signal DAC_IN : std_logic_vector(7 downto 0);
 	signal CLK_12M288 : std_logic;
 	signal CLK_12M288B : std_logic;
+	signal CLK_50B : std_logic;
   signal VIDEO_toggle : std_logic;
   signal VGA_MODE : std_logic := '1';
 
@@ -525,6 +544,7 @@ begin
       CLK_IN1 => extCLK_50M,
       CLK_OUT1 => CLK_12M288,
       CLK_OUT2 => CLK_12M288B,
+      CLK_OUT3 => CLK_50B,
       RESET => '0',
       LOCKED => open
     );
@@ -907,13 +927,16 @@ begin
 	--
 	-- PS2 Keyboard
 	--
+	PS2_DATA_S <= PS2_DATA or host_divert_keyboard;
+	PS2_CLK_S <= PS2_CLK or host_divert_keyboard;
+	
 	PS2_KBD: galaksija_keyboard_v2
    Port map ( 
 -- 			  CLK => CLK_50M,
         CLK => KEYB_CLK,
 			  NMI_n => NMI_n,
-           PS2_DATA => PS2_DATA,
-           PS2_CLK => PS2_CLK,
+           PS2_DATA => PS2_DATA_S,
+           PS2_CLK => PS2_CLK_S,
            LINE_IN => LINE_IN,
            KR => KR,
            KS => KS,
@@ -1160,9 +1183,9 @@ begin
           clkvga => CLK_12M288,
           enable_scandoubling => VGA_MODE,
           disable_scaneffect => '1',
-          ri => RI,
-          gi => GI,
-          bi => BI,
+          ri => RO(7 downto 5),
+          gi => GO(7 downto 5),
+          bi => BO(7 downto 5),
           hsync_ext_n => HSYNC_Q_n,
           vsync_ext_n => VSYNC_Q_n,
           csync_ext_n => VIDEO_SYNC,
@@ -1392,6 +1415,90 @@ begin
 		
 	--
 	--
-	--
-	
+	--	
+
+-- 	fifo #(.RAM_SIZE(512), .ADDRESS_WIDTH(9)) hyperload_fifo_inst(
+--   .q(hyperload_fifo_data[7:0]),
+--   .d(tape_data[7:0]),
+--   .clk(sys_clk_i),
+--   .write(tape_dclk),
+--   .reset(tape_reset),
+-- 
+--   .read(hyperload_fifo_rd),
+--   .empty(hyperload_fifo_empty),
+--   .full(hyperload_fifo_full)
+--   );
+
+  ctrlmodule: entity work.CtrlModule
+    generic map(
+      USE_UART => 0,
+      USE_TAPE => 0
+    )
+    port map(
+      clk => PIX_CLK,
+      clk26 => CLK_50B,
+      reset_n => '1',
+      -- Video signals for OSD
+      vga_hsync => HSYNC_Q_n,
+      vga_vsync => VSYNC_Q_n,
+      osd_window => osd_window,
+      osd_pixel => osd_pixel,
+      -- PS2 keyboard
+      ps2k_clk_in => PS2_CLK,
+      ps2k_dat_in => PS2_DATA,
+      -- SD card signals
+      spi_clk => sd_clk,
+      spi_mosi => sd_mosi,
+      spi_miso => sd_miso,
+      spi_cs => sd_cs_n,
+      -- DIP switches
+      dipswitches => dswitch,
+      -- Control signals
+      host_divert_keyboard => host_divert_keyboard,
+      host_divert_sdcard => host_divert_sdcard,
+      disk_data_in => (others => '0'),
+      disk_sr => (others => '0'),
+      -- tape interface
+      ear_in => '0',
+--       ear_in => micout,
+--       ear_out => ear_in_sc,
+      clk390k625 => '0',
+--       tape_data_out => tape_data,
+--       tape_dclk_out => tape_dclk,
+--       tape_reset_out => tape_reset,
+      tape_hreq => '0',
+--       tape_busy => tape_busy,
+      cpu_reset => '0',
+      juart_rx => '0',
+      debug => (others => '0'),
+      debug2 => (others => '0')
+      -- rom loading
+--       host_bootdata => host_bootdata,
+--       host_bootdata_ack => host_bootdata_ack,
+--       host_bootdata_req => host_bootdata_req,
+--       host_rom_initialised => host_rom_initialised
+     );
+
+--    assign vga_red_i = {ri2[2:0], 5'h0};
+--    assign vga_green_i = {gi2[2:0], 5'h0};
+--    assign vga_blue_i = {bi2[2:0], 5'h0};
+   
+  -- OSD Overlay
+  osdoverlay: entity work.OSD_Overlay
+    port map(
+     clk => CLK_50B,
+     red_in => (others => VIDEO_DATA_R),
+     green_in => (others => VIDEO_DATA_G),
+     blue_in => (others => VIDEO_DATA_B),
+     window_in => '1',
+     osd_window_in => osd_window,
+     osd_pixel_in => osd_pixel,
+     hsync_in => HSYNC_Q_n,
+     red_out => RO,
+     green_out => GO,
+     blue_out => BO,
+     window_out => open,
+     scanline_ena => '0'
+   );
+     
 end rtl;

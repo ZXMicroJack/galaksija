@@ -217,6 +217,16 @@ architecture rtl of Galaksija is
 	signal PS2_DATA_S : std_logic;
 	signal PS2_CLK_S : std_logic;
 
+	-- hyperload functionality from ctrl-module
+	signal hyperload_fifo_data : std_logic_vector(7 downto 0);
+	signal tape_data : std_logic_vector(7 downto 0);
+	signal hyperload_fifo_rd : std_logic;
+	signal hyperload_fifo_empty : std_logic;
+	signal hyperload_fifo_full : std_logic;
+	signal tape_dclk : std_logic;
+	signal tape_reset : std_logic;
+	signal tape_hreq : std_logic;
+	signal tape_busy : std_logic;
   
 	
 	-- 0x80 if z, 0xff if p, and 0x00 if n
@@ -1036,22 +1046,48 @@ begin
 		end if;
 	end process;
 
--- 	fifo #(.RAM_SIZE(512), .ADDRESS_WIDTH(9)) hyperload_fifo_inst(
---   .q(hyperload_fifo_data[7:0]),
---   .d(tape_data[7:0]),
---   .clk(sys_clk_i),
---   .write(tape_dclk),
---   .reset(tape_reset),
--- 
---   .read(hyperload_fifo_rd),
---   .empty(hyperload_fifo_empty),
---   .full(hyperload_fifo_full)
---   );
+	hyperloadfifo: entity work.fifo
+    generic map(
+      RAM_SIZE => 512,
+      ADDRESS_WIDTH => 9
+    )
+    port map(
+      q => hyperload_fifo_data,
+      d => tape_data,
+      clk => CLK_50B,
+      write => tape_dclk,
+      reset => tape_reset,
+      read => hyperload_fifo_rd,
+      empty => hyperload_fifo_empty,
+      full => hyperload_fifo_full
+    );
+    
+-- 	signal hyperload_fifo_data : std_logic_vector(7 downto 0);
+-- 	signal tape_data : std_logic_vector(7 downto 0);
+-- 	signal hyperload_fifo_rd : std_logic;
+-- 	signal hyperload_fifo_empty : std_logic;
+-- 	signal hyperload_fifo_full : std_logic;
 
+  -- glue logic tying hyperload to CPU
+  D(7 downto 0) <= hyperload_fifo_data(7 downto 0) 
+    when A(15 downto 0) = X"FFFD" and MREQ_n = '0' and RD_n = '0' else (others => 'Z');
+	D(7 downto 0) <= "00000"&tape_busy&hyperload_fifo_empty&hyperload_fifo_full
+    when A(15 downto 0) = X"FFFC" and MREQ_n = '0' and RD_n = '0' else (others => 'Z');
+    
+  hyperload_if: process(PIX_CLK,A,MREQ_n,WR_n) begin
+    if (PIX_CLK'event and PIX_CLK = '1') then
+      if (A(15 downto 0) = X"FFFC" and MREQ_n = '0' and WR_n = '0') then
+        hyperload_fifo_rd <= D(0);
+        tape_hreq <= D(1);
+      end if;
+    end if;
+  end process;
+  
   ctrlmodule: entity work.CtrlModule
     generic map(
       USE_UART => 0,
-      USE_TAPE => 0
+      USE_TAPE => 0,
+      USE_HYPERLOAD => 1
     )
     port map(
       clk => PIX_CLK,
@@ -1082,11 +1118,11 @@ begin
 --       ear_in => micout,
 --       ear_out => ear_in_sc,
       clk390k625 => '0',
---       tape_data_out => tape_data,
---       tape_dclk_out => tape_dclk,
---       tape_reset_out => tape_reset,
-      tape_hreq => '0',
---       tape_busy => tape_busy,
+      tape_data_out => tape_data,
+      tape_dclk_out => tape_dclk,
+      tape_reset_out => tape_reset,
+      tape_hreq => tape_hreq,
+      tape_busy => tape_busy,
       cpu_reset => '0',
       juart_rx => '0',
       debug => (others => '0'),

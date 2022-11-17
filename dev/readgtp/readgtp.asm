@@ -6,7 +6,10 @@ include "galaksija.inc"
 
 msg:	db "READ BYTES: "
 data: dw 32768
-nrzeros: dw 0
+chksummsg:	db "CHECKSUM: "
+chksum: dw 0
+readsizemsg:	db "READSIZE: "
+readsize: dw start-readbyte
 
 readbyte:
   ld hl,0xfffc
@@ -49,7 +52,12 @@ start:
   ld a,0x0c
   call g_putchr_rst_f
 
+  ; zero checksum
+  ld hl,chksum
+  xor a
+  ld (hl),a
 
+  ; read 1024 bytes
   ld de,0
   ld b,4
 readloop1:
@@ -57,6 +65,9 @@ readloop1:
   ld b,0
 readloop2:
   call readbyte
+  ld hl,chksum
+  xor (hl)
+  ld (hl),a
   jr c,dontincrement
   inc de
 dontincrement:
@@ -85,4 +96,23 @@ dontincrement:
 	
   ld a,0x0d
   call g_putchr_rst_f
+  
+  ld de,chksummsg
+	call g_printstr_f
+	
+	ld de,chksum
+	call g_print_word_f
+	
+  ld a,0x0d
+  call g_putchr_rst_f
+	
+  ld de,readsizemsg
+	call g_printstr_f
+	
+	ld de,readsize
+	call g_print_word_f
+	
+  ld a,0x0d
+  call g_putchr_rst_f
+  
   ret

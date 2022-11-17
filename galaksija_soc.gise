@@ -136,6 +136,8 @@
       <status xil_pn:value="SuccessfullyRun"/>
       <status xil_pn:value="WarningsGenerated"/>
       <status xil_pn:value="ReadyToRun"/>
+      <status xil_pn:value="OutOfDateForOutputs"/>
+      <status xil_pn:value="OutputChanged"/>
       <outfile xil_pn:name="Galaksija.pcf"/>
       <outfile xil_pn:name="Galaksija_map.map"/>
       <outfile xil_pn:name="Galaksija_map.mrp"/>

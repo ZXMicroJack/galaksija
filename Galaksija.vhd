@@ -1067,7 +1067,7 @@ begin
     port map(
       q => hyperload_fifo_data,
       d => tape_data,
-      clk => CLK_50B,
+      clk => PIX_CLK,
       
       write => tape_dclk,
       reset => tape_reset,

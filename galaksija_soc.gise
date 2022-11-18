@@ -102,86 +102,69 @@
       <status xil_pn:value="SuccessfullyRun"/>
       <status xil_pn:value="ReadyToRun"/>
     </transform>
-    <transform xil_pn:end_ts="1668613643" xil_pn:in_ck="7084714127642835767" xil_pn:name="TRANEXT_xstsynthesize_spartan6" xil_pn:prop_ck="5916863859795302429" xil_pn:start_ts="1668613594">
+    <transform xil_pn:end_ts="1668696419" xil_pn:in_ck="-6452188538793217034" xil_pn:name="TRANEXT_xstsynthesize_spartan6" xil_pn:prop_ck="5916863859795302429" xil_pn:start_ts="1668696379">
       <status xil_pn:value="SuccessfullyRun"/>
       <status xil_pn:value="WarningsGenerated"/>
       <status xil_pn:value="ReadyToRun"/>
+      <status xil_pn:value="OutOfDateForInputs"/>
       <status xil_pn:value="OutOfDateForOutputs"/>
+      <status xil_pn:value="InputAdded"/>
+      <status xil_pn:value="InputRemoved"/>
       <status xil_pn:value="OutputChanged"/>
-      <outfile xil_pn:name="Galaksija.lso"/>
-      <outfile xil_pn:name="Galaksija.ngc"/>
-      <outfile xil_pn:name="Galaksija.prj"/>
-      <outfile xil_pn:name="Galaksija.stx"/>
-      <outfile xil_pn:name="Galaksija.syr"/>
-      <outfile xil_pn:name="Galaksija.xst"/>
-      <outfile xil_pn:name="Galaksija_xst.xrpt"/>
-      <outfile xil_pn:name="_xmsgs/xst.xmsgs"/>
-      <outfile xil_pn:name="webtalk_pn.xml"/>
-      <outfile xil_pn:name="xst"/>
+      <status xil_pn:value="OutputRemoved"/>
     </transform>
     <transform xil_pn:end_ts="1668465522" xil_pn:in_ck="-5634400651365477133" xil_pn:name="TRAN_compileBCD2" xil_pn:prop_ck="6604764647009158612" xil_pn:start_ts="1668465522">
       <status xil_pn:value="SuccessfullyRun"/>
       <status xil_pn:value="ReadyToRun"/>
     </transform>
-    <transform xil_pn:end_ts="1668613652" xil_pn:in_ck="-2586229074593358400" xil_pn:name="TRANEXT_ngdbuild_FPGA" xil_pn:prop_ck="3686798096884294584" xil_pn:start_ts="1668613643">
+    <transform xil_pn:end_ts="1668696426" xil_pn:in_ck="-2586229074593358400" xil_pn:name="TRANEXT_ngdbuild_FPGA" xil_pn:prop_ck="3686798096884294584" xil_pn:start_ts="1668696419">
       <status xil_pn:value="SuccessfullyRun"/>
-      <status xil_pn:value="ReadyToRun"/>
-      <outfile xil_pn:name="Galaksija.bld"/>
-      <outfile xil_pn:name="Galaksija.ngd"/>
-      <outfile xil_pn:name="Galaksija_ngdbuild.xrpt"/>
-      <outfile xil_pn:name="_ngo"/>
-      <outfile xil_pn:name="_xmsgs/ngdbuild.xmsgs"/>
-    </transform>
-    <transform xil_pn:end_ts="1668613688" xil_pn:in_ck="-2886107302273509535" xil_pn:name="TRANEXT_map_spartan6" xil_pn:prop_ck="-9070037347267670262" xil_pn:start_ts="1668613652">
-      <status xil_pn:value="SuccessfullyRun"/>
-      <status xil_pn:value="WarningsGenerated"/>
-      <status xil_pn:value="ReadyToRun"/>
+      <status xil_pn:value="NotReadyToRun"/>
+      <status xil_pn:value="OutOfDateForInputs"/>
+      <status xil_pn:value="OutOfDateForPredecessor"/>
       <status xil_pn:value="OutOfDateForOutputs"/>
+      <status xil_pn:value="InputRemoved"/>
+      <status xil_pn:value="OutputRemoved"/>
+    </transform>
+    <transform xil_pn:end_ts="1668696455" xil_pn:in_ck="-2886107302273509535" xil_pn:name="TRANEXT_map_spartan6" xil_pn:prop_ck="-9070037347267670262" xil_pn:start_ts="1668696426">
+      <status xil_pn:value="SuccessfullyRun"/>
+      <status xil_pn:value="WarningsGenerated"/>
+      <status xil_pn:value="NotReadyToRun"/>
+      <status xil_pn:value="OutOfDateForInputs"/>
+      <status xil_pn:value="OutOfDateForPredecessor"/>
+      <status xil_pn:value="OutOfDateForOutputs"/>
+      <status xil_pn:value="InputRemoved"/>
       <status xil_pn:value="OutputChanged"/>
-      <outfile xil_pn:name="Galaksija.pcf"/>
-      <outfile xil_pn:name="Galaksija_map.map"/>
-      <outfile xil_pn:name="Galaksija_map.mrp"/>
-      <outfile xil_pn:name="Galaksija_map.ncd"/>
-      <outfile xil_pn:name="Galaksija_map.ngm"/>
-      <outfile xil_pn:name="Galaksija_map.xrpt"/>
-      <outfile xil_pn:name="Galaksija_summary.xml"/>
-      <outfile xil_pn:name="Galaksija_usage.xml"/>
-      <outfile xil_pn:name="_xmsgs/map.xmsgs"/>
+      <status xil_pn:value="OutputRemoved"/>
     </transform>
-    <transform xil_pn:end_ts="1668613733" xil_pn:in_ck="-4179781726523562214" xil_pn:name="TRANEXT_par_spartan6" xil_pn:prop_ck="-1885771668075636388" xil_pn:start_ts="1668613688">
+    <transform xil_pn:end_ts="1668696489" xil_pn:in_ck="-4179781726523562214" xil_pn:name="TRANEXT_par_spartan6" xil_pn:prop_ck="-1885771668075636388" xil_pn:start_ts="1668696455">
       <status xil_pn:value="SuccessfullyRun"/>
       <status xil_pn:value="WarningsGenerated"/>
-      <status xil_pn:value="ReadyToRun"/>
-      <outfile xil_pn:name="Galaksija.ncd"/>
-      <outfile xil_pn:name="Galaksija.pad"/>
-      <outfile xil_pn:name="Galaksija.par"/>
-      <outfile xil_pn:name="Galaksija.ptwx"/>
-      <outfile xil_pn:name="Galaksija.unroutes"/>
-      <outfile xil_pn:name="Galaksija.xpi"/>
-      <outfile xil_pn:name="Galaksija_pad.csv"/>
-      <outfile xil_pn:name="Galaksija_pad.txt"/>
-      <outfile xil_pn:name="Galaksija_par.xrpt"/>
-      <outfile xil_pn:name="_xmsgs/par.xmsgs"/>
+      <status xil_pn:value="NotReadyToRun"/>
+      <status xil_pn:value="OutOfDateForInputs"/>
+      <status xil_pn:value="OutOfDateForPredecessor"/>
+      <status xil_pn:value="OutOfDateForOutputs"/>
+      <status xil_pn:value="InputRemoved"/>
+      <status xil_pn:value="OutputRemoved"/>
     </transform>
-    <transform xil_pn:end_ts="1668613757" xil_pn:in_ck="-5634400651365484758" xil_pn:name="TRANEXT_bitFile_spartan6" xil_pn:prop_ck="396117104113915555" xil_pn:start_ts="1668613733">
+    <transform xil_pn:end_ts="1668696509" xil_pn:in_ck="-5634400651365484758" xil_pn:name="TRANEXT_bitFile_spartan6" xil_pn:prop_ck="396117104113915555" xil_pn:start_ts="1668696489">
       <status xil_pn:value="SuccessfullyRun"/>
       <status xil_pn:value="WarningsGenerated"/>
-      <status xil_pn:value="ReadyToRun"/>
-      <outfile xil_pn:name="Galaksija.bgn"/>
-      <outfile xil_pn:name="Galaksija.bit"/>
-      <outfile xil_pn:name="Galaksija.drc"/>
-      <outfile xil_pn:name="Galaksija.ut"/>
-      <outfile xil_pn:name="_xmsgs/bitgen.xmsgs"/>
-      <outfile xil_pn:name="usage_statistics_webtalk.html"/>
-      <outfile xil_pn:name="webtalk.log"/>
-      <outfile xil_pn:name="webtalk_pn.xml"/>
+      <status xil_pn:value="NotReadyToRun"/>
+      <status xil_pn:value="OutOfDateForInputs"/>
+      <status xil_pn:value="OutOfDateForPredecessor"/>
+      <status xil_pn:value="OutOfDateForOutputs"/>
+      <status xil_pn:value="InputRemoved"/>
+      <status xil_pn:value="OutputRemoved"/>
     </transform>
-    <transform xil_pn:end_ts="1668613733" xil_pn:in_ck="-195669395912662947" xil_pn:name="TRAN_postRouteTrce" xil_pn:prop_ck="-9019495824400740530" xil_pn:start_ts="1668613721">
+    <transform xil_pn:end_ts="1668696489" xil_pn:in_ck="-195669395912662947" xil_pn:name="TRAN_postRouteTrce" xil_pn:prop_ck="-9019495824400740530" xil_pn:start_ts="1668696480">
       <status xil_pn:value="SuccessfullyRun"/>
-      <status xil_pn:value="ReadyToRun"/>
-      <outfile xil_pn:name="Galaksija.twr"/>
-      <outfile xil_pn:name="Galaksija.twx"/>
-      <outfile xil_pn:name="_xmsgs/trce.xmsgs"/>
+      <status xil_pn:value="NotReadyToRun"/>
+      <status xil_pn:value="OutOfDateForInputs"/>
+      <status xil_pn:value="OutOfDateForPredecessor"/>
+      <status xil_pn:value="OutOfDateForOutputs"/>
+      <status xil_pn:value="InputRemoved"/>
+      <status xil_pn:value="OutputRemoved"/>
     </transform>
   </transforms>
 

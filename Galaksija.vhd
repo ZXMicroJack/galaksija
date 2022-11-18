@@ -218,6 +218,7 @@ architecture rtl of Galaksija is
 	signal PS2_CLK_S : std_logic;
 
 	-- hyperload functionality from ctrl-module
+	signal hyperloading : std_logic;
 	signal hyperload_fifo_data : std_logic_vector(7 downto 0);
 	signal tape_data : std_logic_vector(7 downto 0);
 	signal hyperload_fifo_rd : std_logic;
@@ -227,7 +228,7 @@ architecture rtl of Galaksija is
 	signal tape_reset : std_logic;
 	signal tape_hreq : std_logic;
 	signal tape_busy : std_logic;
-  
+	signal apply_rom_patch : std_logic;
 	
 	-- 0x80 if z, 0xff if p, and 0x00 if n
 	
@@ -614,7 +615,7 @@ begin
     else '1';
 
     
-	ROM_OE_n <= '0' when ((A(13)='0') and (DECODER_EN='1') and (RFSH = '0')) else
+	ROM_OE_n <= '0' when ((A(13)='0') and (DECODER_EN='1') and (RFSH = '0')) and apply_rom_patch = '0' else
 					'1';
 					
 	ROM_A <= A(12 downto 0);
@@ -706,6 +707,18 @@ begin
 									CE_n => '0',
 									CLK => PIX_CLK
 								);
+								
+
+-- 								module rom_patch(output reg[7:0] q, input wire[15:0] a, input wire clk, output wire patch, input wire on);
+
+          ROM_PATCH: entity work.rom_patch
+          port map(
+            a => A,
+            q => D,
+            clk => PIX_CLK,
+            patch => apply_rom_patch,
+            override => hyperloading
+          );
 -- 				end generate mem_inst;
 
 	--
@@ -1055,6 +1068,7 @@ begin
       q => hyperload_fifo_data,
       d => tape_data,
       clk => CLK_50B,
+      
       write => tape_dclk,
       reset => tape_reset,
       read => hyperload_fifo_rd,
@@ -1073,6 +1087,8 @@ begin
     when A(15 downto 0) = X"FFFD" and MREQ_n = '0' and RD_n = '0' else (others => 'Z');
 	D(7 downto 0) <= "00000"&tape_busy&hyperload_fifo_empty&hyperload_fifo_full
     when A(15 downto 0) = X"FFFC" and MREQ_n = '0' and RD_n = '0' else (others => 'Z');
+  hyperloading <= dswitch(12);
+
     
   hyperload_if: process(PIX_CLK,A,MREQ_n,WR_n) begin
     if (PIX_CLK'event and PIX_CLK = '1') then

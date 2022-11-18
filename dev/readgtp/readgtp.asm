@@ -12,26 +12,26 @@ readsizemsg:	db "READSIZE: "
 readsize: dw start-readbyte
 
 readbyte:
+  ; has data already, then jump straight to read
   ld hl,0xfffc
-  ld a,(hl)
-  bit 1,a
+  bit 1,(hl)
   jr  z,doread
 
+  ; signal read from sd card and wait for busy signal
   ld (hl),2
-  
 waitforbusy:
-  ld a,(hl)
-  bit 2,a
+  bit 2,(hl)
   jr z,waitforbusy
 
-  ld (hl),0
-
-waitwhilebusy:
-  ld a,(hl)
-  bit 2,a
-  jr nz,waitwhilebusy
   
-  bit 1,a
+  ; clear read signal from sd card and wait for clear busy signal
+  ld (hl),0
+waitwhilebusy:
+  bit 2,(hl)
+  jr nz,waitwhilebusy
+
+  ; has data appeared in the fifo
+  bit 1,(hl)
   jr z,doread
 
   ; read has been performed and there is still no data
@@ -39,6 +39,7 @@ waitwhilebusy:
   ret
   
 
+  ; read from fifo and clock next byte
 doread:
   inc hl
   ld a,(hl)

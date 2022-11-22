@@ -256,7 +256,13 @@ architecture rtl of Galaksija is
 			HALT_n		: out std_logic;
 			BUSAK_n		: out std_logic;
 			A				: out std_logic_vector(15 downto 0);
-			D			: inout std_logic_vector(7 downto 0)
+			D			: inout std_logic_vector(7 downto 0);
+			SavePC      : out std_logic_vector(15 downto 0);
+      SaveINT     : out std_logic_vector(7 downto 0);
+      RestorePC   : in std_logic_vector(15 downto 0);
+      RestoreINT  : in std_logic_vector(7 downto 0);
+      
+      RestorePC_n : in std_logic
 		);
 	end component T80a;
 
@@ -423,6 +429,13 @@ begin
 	-- CPU instantation
 	--
 
+-- 			SavePC      : out std_logic_vector(15 downto 0);
+-- 		SaveINT     : out std_logic_vector(7 downto 0);
+-- 		RestorePC   : in std_logic_vector(15 downto 0);
+-- 		RestoreINT  : in std_logic_vector(7 downto 0);
+-- 		
+-- 		RestorePC_n : in std_logic
+
 -- 	cpu_inst: if (picoblaze_only=false) generate
 -- 				 begin
 					CPU: T80a
@@ -438,10 +451,14 @@ begin
 									IORQ_n => IORQ_n,
 									M1_n => M1_n,
 									WAIT_n => WAIT_n,
+-- 									WAIT_n => '1',
 									INT_n => INT_n,
 									NMI_n => NMI_n,
 									WR_n => WR_n,
-									RD_n => RD_n
+									RD_n => RD_n,
+									RestorePC_n => '1',
+									RestorePC => X"0000",
+									RestoreINT => X"00"
 								);
 -- 				end generate cpu_inst;
 
@@ -610,9 +627,8 @@ begin
 	DECODER_EN <= (not(MREQ_n) and not(A(14))) and not(A(15));
 	
 	-- Keyboard and latch address decoding
-	LATCH_KBD_CS_n <= '0' when 
-    ((A(11)='0') and (A(12)='0') and (A(13)='1') and (DECODER_EN = '1'))
-    else '1';
+--  LATCH_KBD_CS_n <= '0' when ((A(11)='0') and (A(12)='0') and (A(13)='1') and (DECODER_EN = '1')) and (RFSH_n = '1')else '1';
+    LATCH_KBD_CS_n <= '0' when ((A(11)='0') and (A(12)='0') and (A(13)='1') and (DECODER_EN = '1')) else '1';
 
     
 	ROM_OE_n <= '0' when ((A(13)='0') and (DECODER_EN='1') and (RFSH = '0')) and apply_rom_patch = '0' else
@@ -620,7 +636,10 @@ begin
 					
 	ROM_A <= A(12 downto 0);
 
-	RAM_CS1_n <= '0' when ((DECODER_EN='1') and (A(11)='1') and (A(12)='0') and (A(13)='1')) or (RFSH = '1') else '1';
+	-- TODO: try this one
+	RAM_CS1_n <= '0' when ((DECODER_EN='1') and (A(11)='1') and (A(12)='0') and (A(13)='1')) else '1';  -- 00 101 00000000000 = h2800
+
+-- 	RAM_CS1_n <= '0' when ((DECODER_EN='1') and (A(11)='1') and (A(12)='0') and (A(13)='1')) or (RFSH = '1') else '1';
 	RAM_CS2_n <= '0' when ((DECODER_EN='1') and (A(11)='0') and (A(12)='1') and (A(13)='1')) else '1';
 	RAM_CS3_n <= '0' when ((DECODER_EN='1') and (A(11)='1') and (A(12)='1') and (A(13)='1')) else '1';
 	
@@ -823,7 +842,8 @@ begin
       -- O7 = 0 when A3..5 = '111'
       -- /WR or /KR7 or /MREQ
       -- TODO get this right
-			if (KR(7) = '0' and WR_n = '0' and MREQ_n = '0') then
+-- 			if (KR(7) = '0' and WR_n = '0' and MREQ_n = '0') then
+			if (KR(7) = '0') then
 -- 			if (MREQ_n = '0' and RFSH_n = '0') then
 				LATCH_DATA <= LATCH_IN;
 			end if;

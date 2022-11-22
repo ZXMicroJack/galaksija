@@ -84,7 +84,15 @@ entity T80a is
 		HALT_n		: out std_logic;
 		BUSAK_n		: out std_logic;
 		A			: out std_logic_vector(15 downto 0);
-		D			: inout std_logic_vector(7 downto 0)
+		D			: inout std_logic_vector(7 downto 0);
+
+		SavePC      : out std_logic_vector(15 downto 0);
+		SaveINT     : out std_logic_vector(7 downto 0);
+		RestorePC   : in std_logic_vector(15 downto 0);
+		RestoreINT  : in std_logic_vector(7 downto 0);
+		
+		RestorePC_n : in std_logic
+		
 	);
 end T80a;
 
@@ -163,7 +171,14 @@ begin
 			DO => DO,
 			MC => MCycle,
 			TS => TState,
-			IntCycle_n => IntCycle_n);
+			IntCycle_n => IntCycle_n,
+			
+			SavePC => SavePC,
+			SaveINT => SaveINT,
+			RestorePC => RestorePC,
+			RestoreINT => RestoreINT,
+			
+			RestorePC_n => RestorePC_n );
 
 	process (CLK_n)
 	begin

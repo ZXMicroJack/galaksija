@@ -1121,13 +1121,16 @@ begin
   
   ctrlmodule: entity work.CtrlModule
     generic map(
+      sysclk_frequency => 123,
+--       ROMSIZE_BITS => 13,
       USE_UART => 0,
       USE_TAPE => 0,
       USE_HYPERLOAD => 1
     )
     port map(
       clk => PIX_CLK,
-      clk26 => CLK_50B,
+--       clk26 => CLK_50B,
+      clk26 => CLK_12M288B,
       reset_n => '1',
       -- Video signals for OSD
       vga_hsync => HSYNC_Q_n,
@@ -1177,7 +1180,8 @@ begin
   -- OSD Overlay
   osdoverlay: entity work.OSD_Overlay
     port map(
-     clk => CLK_50B,
+--      clk => CLK_50B,
+     clk => CLK_12M288B,
      red_in => (others => VIDEO_DATA_R),
      green_in => (others => VIDEO_DATA_G),
      blue_in => (others => VIDEO_DATA_B),

@@ -230,6 +230,10 @@ architecture rtl of Galaksija is
 	signal tape_busy : std_logic;
 	signal apply_rom_patch : std_logic;
 	
+	-- hypersave functionality from ctrl-module
+  signal tape_data_in : std_logic_vector(7 downto 0);
+  signal tape_data_in_rdy : std_logic := '0';
+	
 	-- 0x80 if z, 0xff if p, and 0x00 if n
 	
 	--
@@ -897,24 +901,24 @@ begin
 
 	--MJ
 
-	process(PIX_CLK,VSYNC_Q_n,LOAD_SCAN_LINE_n_prev,LOAD_SCAN_LINE_n,LOAD_SCAN_LINE_n_prev)
-	begin
-		if (PIX_CLK'event) and (PIX_CLK = '1') then
-      if (VSYNC_Q_n = '0') then
-        SCAN_HADDR(10 downto 0) <= "00000000000";
-        SCAN_VADDR(10 downto 0) <= "00000000000";
-      elsif (SCAN_HADDR(10 downto 0) = "00000000000") then
-        if (LOAD_SCAN_LINE_n_prev = '1' and LOAD_SCAN_LINE_n = '0') then
-          SCAN_HADDR <= SCAN_HADDR + 1;
-        end if;
-      elsif (HSYNC_Q_n = '0') then
-        SCAN_HADDR(10 downto 0) <= "00000000000";
-        SCAN_VADDR <= SCAN_VADDR + 1;
-      else
-        SCAN_HADDR <= SCAN_HADDR + 1;
-      end if;
-		end if;
-	end process;
+-- 	process(PIX_CLK,VSYNC_Q_n,LOAD_SCAN_LINE_n_prev,LOAD_SCAN_LINE_n,LOAD_SCAN_LINE_n_prev)
+-- 	begin
+-- 		if (PIX_CLK'event) and (PIX_CLK = '1') then
+--       if (VSYNC_Q_n = '0') then
+--         SCAN_HADDR(10 downto 0) <= "00000000000";
+--         SCAN_VADDR(10 downto 0) <= "00000000000";
+--       elsif (SCAN_HADDR(10 downto 0) = "00000000000") then
+--         if (LOAD_SCAN_LINE_n_prev = '1' and LOAD_SCAN_LINE_n = '0') then
+--           SCAN_HADDR <= SCAN_HADDR + 1;
+--         end if;
+--       elsif (HSYNC_Q_n = '0') then
+--         SCAN_HADDR(10 downto 0) <= "00000000000";
+--         SCAN_VADDR <= SCAN_VADDR + 1;
+--       else
+--         SCAN_HADDR <= SCAN_HADDR + 1;
+--       end if;
+-- 		end if;
+-- 	end process;
 	
 	
 
@@ -980,6 +984,10 @@ begin
       GI <= VIDEO_DATA_G&VIDEO_DATA_G&VIDEO_DATA_G;
       BI <= VIDEO_DATA_B&VIDEO_DATA_B&VIDEO_DATA_B;
 
+--       RI <= VIDEO_DATA&VIDEO_DATA&VIDEO_DATA;
+--       GI <= VIDEO_DATA&VIDEO_DATA&VIDEO_DATA;
+--       BI <= VIDEO_DATA&VIDEO_DATA&VIDEO_DATA;
+
       VGA_SCANDOUBLER : entity work.vga_scandoubler
         port map(
           clkvideo => PIX_CLK_COUNTER(0),
@@ -1000,47 +1008,47 @@ begin
         );
       
 	-- Color is specified by writing to the port FFFF
-	process(RESET_n, PIX_CLK, D, A, WR_n)
-	begin
-		if (RESET_n = '0') then
-			port_FFFF <= "000";
-		else
-			if (PIX_CLK'event) and (PIX_CLK = '1') then
-				if (WR_n = '0') and (MREQ_n = '0') and (A = X"FFFF") then
-						port_FFFF <= D(2 downto 0);
-				end if;
-			end if;
-		end if;
-	end process;
+-- 	process(RESET_n, PIX_CLK, D, A, WR_n)
+-- 	begin
+-- 		if (RESET_n = '0') then
+-- 			port_FFFF <= "000";
+-- 		else
+-- 			if (PIX_CLK'event) and (PIX_CLK = '1') then
+-- 				if (WR_n = '0') and (MREQ_n = '0') and (A = X"FFFF") then
+-- 						port_FFFF <= D(2 downto 0);
+-- 				end if;
+-- 			end if;
+-- 		end if;
+-- 	end process;
 
 	-- Color RAM activation register - overrides register FFFF settings
-	process(RESET_n, PIX_CLK, D, A, WR_n)
-	begin
-		if (RESET_n = '0') then
-			port_FFFE <= '0';
-		else
-			if (PIX_CLK'event) and (PIX_CLK = '1') then
-				if (WR_n = '0') and (MREQ_n = '0') and (A = X"FFFE") then
-						port_FFFE <= D(0);
-				end if;
-			end if;
-		end if;
-	end process;
+-- 	process(RESET_n, PIX_CLK, D, A, WR_n)
+-- 	begin
+-- 		if (RESET_n = '0') then
+-- 			port_FFFE <= '0';
+-- 		else
+-- 			if (PIX_CLK'event) and (PIX_CLK = '1') then
+-- 				if (WR_n = '0') and (MREQ_n = '0') and (A = X"FFFE") then
+-- 						port_FFFE <= D(0);
+-- 				end if;
+-- 			end if;
+-- 		end if;
+-- 	end process;
 
 
-	CRAM: color_ram 
-		 Port map ( CLK_WR => PIX_CLK,
-						A => A, 
-						D => D(2 downto 0),
-						WR_n => WR_n,
-						MREQ_n => MREQ_n,
-						OE_n => RD_n,
-						VADDR => SCAN_VADDR(7 downto 2),
-						HADDR => SCAN_HADDR(7 downto 2),
-						CLK_RD => PIX_CLK,
-						COLORS => COLORS
-				  );
-	
+-- 	CRAM: color_ram 
+-- 		 Port map ( CLK_WR => PIX_CLK,
+-- 						A => A, 
+-- 						D => D(2 downto 0),
+-- 						WR_n => WR_n,
+-- 						MREQ_n => MREQ_n,
+-- 						OE_n => RD_n,
+-- 						VADDR => SCAN_VADDR(7 downto 2),
+-- 						HADDR => SCAN_HADDR(7 downto 2),
+-- 						CLK_RD => PIX_CLK,
+-- 						COLORS => COLORS
+-- 				  );
+-- 	
 	--
 	-- End of VGA output
 	--
@@ -1109,12 +1117,14 @@ begin
     when A(15 downto 0) = X"FFFC" and MREQ_n = '0' and RD_n = '0' else (others => 'Z');
   hyperloading <= dswitch(12);
 
-    
   hyperload_if: process(PIX_CLK,A,MREQ_n,WR_n) begin
     if (PIX_CLK'event and PIX_CLK = '1') then
       if (A(15 downto 0) = X"FFFC" and MREQ_n = '0' and WR_n = '0') then
         hyperload_fifo_rd <= D(0);
         tape_hreq <= D(1);
+        tape_data_in_rdy <= D(2);
+      elsif (A(15 downto 0) = X"FFFD" and MREQ_n = '0' and WR_n = '0') then
+        tape_data_in(7 downto 0) <= D(7 downto 0);
       end if;
     end if;
   end process;
@@ -1162,6 +1172,8 @@ begin
       tape_reset_out => tape_reset,
       tape_hreq => tape_hreq,
       tape_busy => tape_busy,
+      tape_data_in => tape_data_in,
+      tape_data_in_rdy => tape_data_in_rdy,
       cpu_reset => '0',
       juart_rx => '0',
       debug => (others => '0'),

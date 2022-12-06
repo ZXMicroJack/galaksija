@@ -968,15 +968,18 @@ begin
        
       VIDEO_COLORING : process(VIDEO_DATA, port_FFFE, COLORS, port_FFFF) begin
         if (PIX_CLK'event and PIX_CLK = '1') then
-          if (port_FFFE = '0') then
-            VIDEO_DATA_R <= VIDEO_DATA and not(port_FFFF(2));
-            VIDEO_DATA_G <= VIDEO_DATA and not(port_FFFF(1));
-            VIDEO_DATA_B <= VIDEO_DATA and not(port_FFFF(0));
-          else
-            VIDEO_DATA_R <= VIDEO_DATA and not(COLORS(2));
-            VIDEO_DATA_G <= VIDEO_DATA and not(COLORS(1));
-            VIDEO_DATA_B <= VIDEO_DATA and not(COLORS(0));
-          end if;
+--           if (port_FFFE = '0') then
+--             VIDEO_DATA_R <= VIDEO_DATA and not(port_FFFF(2));
+--             VIDEO_DATA_G <= VIDEO_DATA and not(port_FFFF(1));
+--             VIDEO_DATA_B <= VIDEO_DATA and not(port_FFFF(0));
+--           else
+--             VIDEO_DATA_R <= VIDEO_DATA and not(COLORS(2));
+--             VIDEO_DATA_G <= VIDEO_DATA and not(COLORS(1));
+--             VIDEO_DATA_B <= VIDEO_DATA and not(COLORS(0));
+--           end if;
+            VIDEO_DATA_R <= VIDEO_DATA;
+            VIDEO_DATA_G <= VIDEO_DATA;
+            VIDEO_DATA_B <= VIDEO_DATA;
         end if;
       end process;
             

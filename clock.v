@@ -118,7 +118,7 @@ module clock
     .CLKOUT1_DIVIDE         (59),
     .CLKOUT1_PHASE          (0.000),
     .CLKOUT1_DUTY_CYCLE     (0.500),
-    .CLKOUT2_DIVIDE         (29.5),
+    .CLKOUT2_DIVIDE         (15.0), // 48.333
     .CLKOUT2_PHASE          (0.000),
     .CLKOUT2_DUTY_CYCLE     (0.500),
     .CLKIN_PERIOD           (20.000),

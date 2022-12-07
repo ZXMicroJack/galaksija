@@ -401,7 +401,7 @@ architecture rtl of Galaksija is
 	signal DAC_IN : std_logic_vector(7 downto 0);
 	signal CLK_12M288 : std_logic;
 	signal CLK_12M288B : std_logic;
-	signal CLK_50B : std_logic;
+	signal CLK_48M333 : std_logic;
   signal VIDEO_toggle : std_logic;
   signal VGA_MODE : std_logic := '1';
 
@@ -424,7 +424,7 @@ begin
       CLK_IN1 => extCLK_50M,
       CLK_OUT1 => CLK_12M288,
       CLK_OUT2 => CLK_12M288B,
-      CLK_OUT3 => CLK_50B,
+      CLK_OUT3 => CLK_48M333,
       RESET => '0',
       LOCKED => open
     );
@@ -1144,6 +1144,7 @@ begin
       clk => PIX_CLK,
 --       clk26 => CLK_50B,
       clk26 => CLK_12M288B,
+      clk50 => CLK_48M333,
       reset_n => '1',
       -- Video signals for OSD
       vga_hsync => HSYNC_Q_n,

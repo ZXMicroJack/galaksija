@@ -1,4 +1,4 @@
-default: hyperload.bin hyperload.hex
+default: hyperload.bin hyperload.hex hypersave.bin hypersave.hex
 
 %.bin: %.asm
 	z80asm -l -o$@ $^
@@ -8,6 +8,9 @@ default: hyperload.bin hyperload.hex
 
 hyperload.bin: hyperload.asm
 hyperload.hex: hyperload.bin
+
+hypersave.bin: hypersave.asm
+hypersave.hex: hypersave.bin
 
 clean:
 	rm *.bin *.hex

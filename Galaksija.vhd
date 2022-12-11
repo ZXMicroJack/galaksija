@@ -233,6 +233,9 @@ architecture rtl of Galaksija is
 	-- hypersave functionality from ctrl-module
   signal tape_data_in : std_logic_vector(7 downto 0);
   signal tape_data_in_rdy : std_logic := '0';
+  
+  signal memcfg : std_logic_vector(1 downto 0) := "10";
+  signal memcfgx : std_logic_vector(1 downto 0) := "10";
 	
 	-- 0x80 if z, 0xff if p, and 0x00 if n
 	
@@ -649,12 +652,13 @@ begin
 	
 	-- gives us 32k expansion
 -- 	SRAM_CS1_n <= '0' when MREQ_n = '0' and (A(15)='1' xor A(14)='1') else '1';
-	SRAM_CS1_n <= '1';
+-- 	SRAM_CS1_n <= '1';
 
 	-- 48k expansion
 -- 	SRAM_CS2_n <= '0' when MREQ_n = '0' and (A(15)='1' and A(14)='1') else '1';
-	SRAM_CS2_n <= '1';
+-- 	SRAM_CS2_n <= '1';
 	
+-- 	dswitch
 	-- uncomment for 6k
 -- 	SRAM_CS_n <= '1';
 
@@ -662,7 +666,27 @@ begin
 -- 	SRAM_CS_n <= '0' when MREQ_n = '0' and (A(15 downto 14)="01" or A(15 downto 14)="10") else '1';
 
 	-- +MAX - 16bytes
-  SRAM_CS_n <= '0' when MREQ_n = '0' and A(15 downto 14)/="00" and A(15 downto 4) /= X"FFF" else '1';
+	SRAM_CS1_n <= '0' when MREQ_n = '0' and (A(15 downto 14)="01" or A(15 downto 14)="10") else '1';
+  SRAM_CS2_n <= '0' when MREQ_n = '0' and A(15 downto 14)/="00" and A(15 downto 4) /= X"FFF" else '1';
+  
+--   SRAM_CS_n <= SRAM_CS1_n when memcfg(1 downto 0) = "01" else
+--                 SRAM_CS2_n when memcfg(1 downto 0) = "10" else
+--                 '1';
+
+  process (PIX_CLK, RESET_n) begin
+    if (PIX_CLK'event and PIX_CLK = '1' and RESET_n = '0') then
+      memcfgx(1 downto 0) <= memcfg(1 downto 0);
+    end if;
+  end process;
+
+  process (SRAM_CS_n) begin
+    if (memcfgx(0) = '1') then SRAM_CS_n <= SRAM_CS1_n;
+    elsif (memcfgx(1) = '1') then SRAM_CS_n <= SRAM_CS2_n;
+    else SRAM_CS_n <= '1';
+    end if;
+  end process;
+--   SRAM_CS_n <= (SRAM_CS1_n when memcfg(0) = '1' else '1') and 
+--                 (SRAM_CS2_n when memcfg(1) = '1' else '1');
 
 -- 	SRAM_CS_n <= '0' when MREQ_n = '0' and (A(15)='1' or A(14)='1') and (A(15 downto 14) /= "11") else '1';
 -- 	SRAM_CS_n <= '0' when MREQ_n = '0' and (A(15)='1' or A(14)='1') and (A(15 downto 13) /= "111") else '1';
@@ -1181,7 +1205,8 @@ begin
       cpu_reset => '0',
       juart_rx => '0',
       debug => (others => '0'),
-      debug2 => (others => '0')
+      debug2 => (others => '0'),
+      memcfg => memcfg
       -- rom loading
 --       host_bootdata => host_bootdata,
 --       host_bootdata_ack => host_bootdata_ack,

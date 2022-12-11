@@ -236,6 +236,10 @@ architecture rtl of Galaksija is
   
   signal memcfg : std_logic_vector(1 downto 0) := "10";
   signal memcfgx : std_logic_vector(1 downto 0) := "10";
+
+  signal alt_char_rom : std_logic := '0';
+  signal apply_charrom_patch : std_logic;
+  signal CHROM_D_PATCHED : std_logic_vector(7 downto 0);
 	
 	-- 0x80 if z, 0xff if p, and 0x00 if n
 	
@@ -895,7 +899,7 @@ begin
 		end if;
 	end process;
 	
-	-- Character generator address	
+	-- Character generator address
 	CHROM_A <= LATCH_DATA(3 downto 0) & TMP(7) & TMP(5 downto 0);
 -- 	CHROM_CLK <= PIX_CLK when ESC_STATE = '0' else CLK_50M;
 	CHROM_CLK <= PIX_CLK;
@@ -908,6 +912,16 @@ begin
 					CE_n => '0',
 					CLK => CHROM_CLK
 				);
+				  
+  CH_GEN_ROM_PATCH: entity work.char_rom_patch
+    port map(
+      a => CHROM_A,
+      q => CHROM_D_PATCHED,
+      clk => PIX_CLK,
+      patch => apply_charrom_patch,
+      override => alt_char_rom
+    );
+  
 	
 	-- Video shift register
   process(PIX_CLK, LOAD_SCAN_LINE_n, SHREG)
@@ -915,7 +929,11 @@ begin
 		if (PIX_CLK'event) and (PIX_CLK = '1') then
       LOAD_SCAN_LINE_n_prev <= LOAD_SCAN_LINE_n;
 			if (LOAD_SCAN_LINE_n_prev = '1' and LOAD_SCAN_LINE_n = '0') then
-				SHREG <= CHROM_D;
+        if (apply_charrom_patch = '1') then
+          SHREG <= CHROM_D_PATCHED;
+        else 
+          SHREG <= CHROM_D;
+        end if;
 			else
 				SHREG <= SHREG(6 downto 0) & '1';
 			end if;
@@ -1143,6 +1161,7 @@ begin
 	D(7 downto 0) <= "00000"&tape_busy&hyperload_fifo_empty&hyperload_fifo_full
     when A(15 downto 0) = X"FFFC" and MREQ_n = '0' and RD_n = '0' else (others => 'Z');
   hyperloading <= dswitch(12);
+  alt_char_rom <= dswitch(13);
 
   hyperload_if: process(PIX_CLK,A,MREQ_n,WR_n) begin
     if (PIX_CLK'event and PIX_CLK = '1') then

@@ -43,10 +43,12 @@ entity Galaksija is
         SRAM_DATA : inout std_logic_vector(7 downto 0);
         SRAM_WE_N : out std_logic;
 
-        SD_CS_N : out std_logic;
+        SD_CS_N : buffer std_logic;
         SD_CLK : out std_logic;
         SD_MOSI : out std_logic;
-        SD_MISO : in std_logic
+        SD_MISO : in std_logic;
+        
+        LED : out std_logic
 			);
 end Galaksija;
 
@@ -98,6 +100,7 @@ architecture rtl of Galaksija is
   signal LOAD_SCAN_LINE_n_prev : std_logic;
 	
 	signal dRFSH : std_logic;
+	signal mrst_n : std_logic;
 	--
 	-- End of Z80A signals
 	--
@@ -332,7 +335,8 @@ architecture rtl of Galaksija is
 				  KEY_CODE : out std_logic_vector(7 downto 0);
 			     KEY_STROBE : out std_logic;
 				  RESET_n : in STD_LOGIC;
-          VIDEO_toggle : out std_logic			  
+          VIDEO_toggle : out std_logic;
+          MRST_n : out std_logic
 				  );
 	end component galaksija_keyboard_v2;
 
@@ -413,6 +417,7 @@ architecture rtl of Galaksija is
   signal VGA_MODE : std_logic := '1';
 
 	signal SCAN_VADDR, SCAN_HADDR : std_logic_vector(10 downto 0);
+	signal MULTIBOOT_COUNTER : std_logic_vector(2 downto 0) := "000";
   
   
 begin
@@ -852,7 +857,8 @@ begin
 			  KEY_CODE => KEY_CODE,
 			  KEY_STROBE => KEY_STROBE,
 			  RESET_n => RESET1_n,
-			  VIDEO_toggle => VIDEO_toggle
+			  VIDEO_toggle => VIDEO_toggle,
+			  MRST_n => mrst_n
 			  );
 	
 	--
@@ -1174,7 +1180,14 @@ begin
       end if;
     end if;
   end process;
+
   
+  ACTIVITY_LED: process(CLK_12M288B) begin
+    if (CLK_12M288B'event and CLK_12M288B = '1') then
+      LED <= not SD_CS_N;
+    end if;
+  end process;
+
   ctrlmodule: entity work.CtrlModule
     generic map(
       sysclk_frequency => 123,
@@ -1255,5 +1268,17 @@ begin
      window_out => open,
      scanline_ena => '0'
    );
+   
+   clock_divider : process (CLK_12M288B) begin
+    if (CLK_12M288B'event and CLK_12M288B = '1') then
+      MULTIBOOT_COUNTER <= MULTIBOOT_COUNTER + 1;
+    end if;
+   end process;
+
+   reset_to_bios: entity work.multiboot
+    port map(
+      clk_icap => MULTIBOOT_COUNTER(2),
+      mrst_n => mrst_n
+    );
      
 end rtl;

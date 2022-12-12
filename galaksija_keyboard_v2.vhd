@@ -24,7 +24,8 @@ entity galaksija_keyboard_v2 is
 			  KEY_CODE : out std_logic_vector(7 downto 0);
 			  KEY_STROBE : out std_logic;
 			  RESET_n : in STD_LOGIC;
-			  VIDEO_toggle : out std_logic
+			  VIDEO_toggle : out std_logic;
+			  MRST_n : out std_logic
 			  );
 end galaksija_keyboard_v2;
 
@@ -54,7 +55,7 @@ architecture rtl of galaksija_keyboard_v2 is
 	type STATES is (WAIT_CODE, RELEASE);
 	signal CState, NState : STATES := WAIT_CODE;
 	
-	signal CTRL, ALT, DEL : std_logic := '0';
+	signal CTRL, ALT, DEL, BS : std_logic := '0';
 
 	signal SHIFT_RIGHT : std_logic := '0';
 	
@@ -327,6 +328,14 @@ begin
 					end if;
 				end if;
 
+				if (scan_code = X"66") then
+					if (clr = '1') then
+						BS <= '1';
+					elsif (set = '1') then
+						BS <= '0';
+					end if;
+				end if;
+				
 				if (scan_code = X"59") then
 					if (clr = '1') then
 						SHIFT_RIGHT <= '1';
@@ -345,7 +354,7 @@ begin
 			end if;
 		end process;
 
-	process(CTRL, ALT, DEL, SHIFT_RIGHT, CLK)
+	process(CTRL, ALT, DEL, SHIFT_RIGHT, BS, CLK)
 	begin
 		if (CLK'event) and (CLK = '1') then
 			if ((CTRL = '1') and (ALT = '1') and (SHIFT_RIGHT = '1')) then
@@ -359,6 +368,12 @@ begin
 			else
 				RST_n <= '1';
 			end if;
+			
+			if ((CTRL = '1') and (ALT = '1') and (BS = '1')) then
+        MRST_n <= '0';
+      else
+        MRST_n <= '1';
+      end if;
 		end if;
 	end process;
 

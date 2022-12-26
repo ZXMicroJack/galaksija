@@ -1,7 +1,7 @@
 /* This file is part of fpga-spec by ZXMicroJack - see LICENSE.txt for moreinfo */
 module rom_patch(output reg[7:0] q, input wire[15:0] a, input wire clk, output wire patch, input wire override);
    reg [7:0] memload [0:36];
-   reg [7:0] memsave [0:26];
+   reg [7:0] memsave [0:25];
 
    initial begin
      $readmemh("dev/patch/hyperload.hex", memload);

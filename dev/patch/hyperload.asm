@@ -1,10 +1,13 @@
-  org 0x0e93
-exit_vector:
+;   org 0x0e93
+
+exit_vector: equ 0xe93
+l0e93h: equ 0xe93
+
 
   org 0x0edd
-readbyte:
-  ; has data already, then jump straight to read
-  push hl
+; can use b, hl, a
+l0eddh:
+	exx		;0edd
   ld hl,0xfffc
   bit 1,(hl)
   jr  z,doread
@@ -29,15 +32,12 @@ waitwhilebusy:
   ; read from fifo and clock next byte
 doread:
   inc hl
-  ld c,(hl)
+  ld a,(hl)
   dec hl
   ld (hl),1
   ld (hl),0
 
-  ld a,c
 end:
-  pop hl
+  exx
+  ld c,a
   jr exit_vector
-;   jp 0x0e93
-
-  

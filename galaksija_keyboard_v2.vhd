@@ -344,7 +344,7 @@ begin
 					end if;
 				end if;
 				
-				if (scan_code = X"7E") then
+				if (scan_code = X"7E" and CTRL = '0') then
           if (clr = '1') then
             VIDEO_toggle <= '1';
           elsif (set = '1') then 

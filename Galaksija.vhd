@@ -122,6 +122,9 @@ architecture rtl of Galaksija is
 	-- Address decoder
 	--
 	signal ROM_OE_n : std_logic;
+	signal ROM2_OE_n : std_logic;
+	signal ROMC_OE_n : std_logic;
+	signal ROMD_OE_n : std_logic;
 	signal ROM_A : std_logic_vector(12 downto 0);
 	
 	signal RAM_A7 : std_logic;
@@ -237,8 +240,8 @@ architecture rtl of Galaksija is
   signal tape_data_in : std_logic_vector(7 downto 0);
   signal tape_data_in_rdy : std_logic := '0';
   
-  signal memcfg : std_logic_vector(1 downto 0) := "10";
-  signal memcfgx : std_logic_vector(1 downto 0) := "10";
+  signal memcfg : std_logic_vector(3 downto 0) := "0010";
+  signal memcfgx : std_logic_vector(3 downto 0) := "0010";
 
   signal alt_char_rom : std_logic := '0';
   signal apply_charrom_patch : std_logic;
@@ -650,6 +653,12 @@ begin
 	ROM_OE_n <= '0' when ((A(13)='0') and (DECODER_EN='1') and (RFSH = '0')) and apply_rom_patch = '0' else
 					'1';
 					
+  -- e000 -> efff
+  ROMC_OE_n <= '0' when A(15 downto 12) = X"E" and memcfg(2) = '1' else '1';
+  ROMD_OE_n <= '0' when A(15 downto 12) = X"F" and memcfg(3) = '1' else '1';
+  
+	ROM2_OE_n <= ROMC_OE_n and ROMD_OE_n;
+					
 	ROM_A <= A(12 downto 0);
 
 	-- TODO: try this one
@@ -675,8 +684,8 @@ begin
 -- 	SRAM_CS_n <= '0' when MREQ_n = '0' and (A(15 downto 14)="01" or A(15 downto 14)="10") else '1';
 
 	-- +MAX - 16bytes
-	SRAM_CS1_n <= '0' when MREQ_n = '0' and (A(15 downto 14)="01" or A(15 downto 14)="10") else '1';
-  SRAM_CS2_n <= '0' when MREQ_n = '0' and A(15 downto 14)/="00" and A(15 downto 4) /= X"FFF" else '1';
+	SRAM_CS1_n <= '0' when MREQ_n = '0' and (A(15 downto 14)="01" or A(15 downto 14)="10") and ROMC_OE_n = '1' else '1';
+  SRAM_CS2_n <= '0' when MREQ_n = '0' and A(15 downto 14)/="00" and A(15 downto 4) /= X"FFF" and ROMD_OE_n = '1' else '1';
   
 --   SRAM_CS_n <= SRAM_CS1_n when memcfg(1 downto 0) = "01" else
 --                 SRAM_CS2_n when memcfg(1 downto 0) = "10" else
@@ -764,6 +773,14 @@ begin
 									CLK => PIX_CLK
 								);
 								
+					ROMEXT: entity work.galaksija_rom_8k_upper
+					port map (
+									A => ROM_A,
+									DO => D,
+									OE_n => ROM2_OE_n,
+									CE_n => '0',
+									CLK => PIX_CLK
+								);
 
 -- 								module rom_patch(output reg[7:0] q, input wire[15:0] a, input wire clk, output wire patch, input wire on);
 
